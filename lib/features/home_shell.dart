@@ -1,30 +1,25 @@
 import 'package:flutter/material.dart';
-import 'dashboard/dashboard_screen.dart';
-import 'orders/orders_list_screen.dart';
-import 'customers/customers_list_screen.dart';
+import 'package:go_router/go_router.dart';
 
-class HomeShell extends StatefulWidget {
-  const HomeShell({super.key});
-  @override
-  State<HomeShell> createState() => _HomeShellState();
-}
+class HomeShell extends StatelessWidget {
+  final Widget child;
+  const HomeShell({super.key, required this.child});
 
-class _HomeShellState extends State<HomeShell> {
-  int _index = 0;
+  static const _tabs = ['/dashboard', '/orders', '/customers'];
 
-  final _screens = const [
-    DashboardScreen(),
-    OrdersListScreen(),
-    CustomersListScreen(),
-  ];
+  int _indexForLocation(String location) {
+    final i = _tabs.indexWhere((t) => location.startsWith(t));
+    return i == -1 ? 0 : i;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final location = GoRouterState.of(context).matchedLocation;
     return Scaffold(
-      body: _screens[_index],
+      body: child,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
+        selectedIndex: _indexForLocation(location),
+        onDestinationSelected: (i) => context.go(_tabs[i]),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Overview'),
           NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long), label: 'Orders'),
