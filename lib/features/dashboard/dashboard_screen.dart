@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dashboard_provider.dart';
-import 'dashboard_api.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});

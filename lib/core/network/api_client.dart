@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:dio/dio.dart';
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
@@ -8,7 +9,7 @@ import '../auth/app_user.dart';
 
 class ApiClient {
   late final Dio dio;
-  late final PersistCookieJar cookieJar;
+  late final CookieJar cookieJar;
 
   /// Called whenever a request comes back 401. Wire this to your auth
   /// controller so the router can redirect to /login automatically,
@@ -16,11 +17,18 @@ class ApiClient {
   void Function()? onUnauthorized;
 
   Future<void> init() async {
-    final dir = await getApplicationDocumentsDirectory();
-    cookieJar = PersistCookieJar(storage: FileStorage('${dir.path}/.cookies/'));
+    if (kIsWeb) {
+      cookieJar = CookieJar() as PersistCookieJar? ?? (throw UnsupportedError('unreachable'));
+    } else {
+      final dir = await getApplicationDocumentsDirectory();
+      cookieJar = PersistCookieJar(storage: FileStorage('${dir.path}/.cookies/'));
+    }
     dio = Dio(BaseOptions(
       baseUrl: Env.apiBaseUrl,
       headers: {'Content-Type': 'application/json'},
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
+      extra: {'withCredentials': true},
     ));
     dio.interceptors.add(CookieManager(cookieJar));
   }
@@ -89,14 +97,14 @@ class ApiClient {
       return false;
     }
   }
-}
+
 // --- Auth ---
 
   /// Returns the logged-in user (with role) on success, throws ApiException
   /// (typically UnauthorizedException) on failure.
   Future<AppUser> login(String email, String password) async {
     final res = await post('/api/auth/login', {'email': email, 'password': password});
-    return AppUser.fromJson(res.data);
+    return AppUser.fromJson(res.data['user']);
   }
 
   /// Checks for an existing session on app launch (cookie already present)
@@ -108,7 +116,7 @@ class ApiClient {
   Future<AppUser?> fetchCurrentUser() async {
     try {
       final res = await get('/api/auth/me');
-      return AppUser.fromJson(res.data);
+      return AppUser.fromJson(res.data['user']);
     } on ApiException {
       return null;
     }
@@ -122,3 +130,4 @@ class ApiClient {
     }
     cookieJar.deleteAll();
   }
+}

@@ -1,5 +1,4 @@
-import '../../core/api_client.dart';
-
+import '../../core/network/api_client.dart';
 class Order {
   final int id;
   final String customerName, phone, status, paymentStatus, createdAt;

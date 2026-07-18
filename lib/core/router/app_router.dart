@@ -1,7 +1,7 @@
 import 'package:go_router/go_router.dart';
 import '../auth/auth_controller.dart';
 import '../auth/route_permissions.dart';
-import '../../features/auth/login_screen.dart';
+import '../auth/login_screen.dart';
 import '../../features/home_shell.dart';
 import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/orders/orders_list_screen.dart';

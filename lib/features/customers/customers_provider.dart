@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/api_client.dart';
 import 'customers_api.dart';
 import '../../core/network/api_client_provider.dart' show apiClientProvider;
 
