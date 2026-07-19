@@ -18,18 +18,24 @@ class ApiClient {
 
   Future<void> init() async {
     if (kIsWeb) {
-      cookieJar = CookieJar() as PersistCookieJar? ?? (throw UnsupportedError('unreachable'));
+      cookieJar =
+          CookieJar() as PersistCookieJar? ??
+          (throw UnsupportedError('unreachable'));
     } else {
       final dir = await getApplicationDocumentsDirectory();
-      cookieJar = PersistCookieJar(storage: FileStorage('${dir.path}/.cookies/'));
+      cookieJar = PersistCookieJar(
+        storage: FileStorage('${dir.path}/.cookies/'),
+      );
     }
-    dio = Dio(BaseOptions(
-      baseUrl: Env.apiBaseUrl,
-      headers: {'Content-Type': 'application/json'},
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
-      extra: {'withCredentials': true},
-    ));
+    dio = Dio(
+      BaseOptions(
+        baseUrl: Env.apiBaseUrl,
+        headers: {'Content-Type': 'application/json'},
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 10),
+        extra: {'withCredentials': true},
+      ),
+    );
     dio.interceptors.add(CookieManager(cookieJar));
   }
 
@@ -98,13 +104,20 @@ class ApiClient {
     }
   }
 
-// --- Auth ---
+  // --- Auth ---
 
   /// Returns the logged-in user (with role) on success, throws ApiException
   /// (typically UnauthorizedException) on failure.
   Future<AppUser> login(String email, String password) async {
-    final res = await post('/api/auth/login', {'email': email, 'password': password});
-    return AppUser.fromJson(res.data['user']);
+    try {
+      final res = await post('/api/auth/login', {
+        'email': email,
+        'password': password,
+      });
+      return AppUser.fromJson(res.data['user']);
+    } on UnauthorizedException {
+      throw const UnauthorizedException('Invalid email or password.');
+    }
   }
 
   /// Checks for an existing session on app launch (cookie already present)
@@ -117,7 +130,7 @@ class ApiClient {
     try {
       final res = await get('/api/auth/me');
       return AppUser.fromJson(res.data['user']);
-    } on ApiException {
+    } catch (_) {
       return null;
     }
   }

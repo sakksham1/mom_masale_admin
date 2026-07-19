@@ -26,9 +26,14 @@ class AuthController extends ChangeNotifier {
 
   /// Call once at app startup to restore an existing cookie session.
   Future<void> restoreSession() async {
-    _user = await _client.fetchCurrentUser();
-    _initializing = false;
-    notifyListeners();
+    try {
+      _user = await _client.fetchCurrentUser();
+    } catch (e, st) {
+      debugPrint('restoreSession failed: $e\n$st');
+    } finally {
+      _initializing = false;
+      notifyListeners();
+    }
   }
 
   Future<void> login(String email, String password) async {
