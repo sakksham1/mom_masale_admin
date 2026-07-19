@@ -7,6 +7,7 @@ import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/orders/orders_list_screen.dart';
 import '../../features/customers/customers_list_screen.dart';
 import '../../features/account/account_screen.dart';
+import '../../features/products/products_list_screen.dart';
 
 GoRouter buildRouter(AuthController auth) {
   return GoRouter(
@@ -43,6 +44,10 @@ GoRouter buildRouter(AuthController auth) {
             builder: (c, s) => const CustomersListScreen(),
           ),
           GoRoute(path: '/me', builder: (c, s) => const AccountScreen()),
+          GoRoute(
+            path: '/inventory',
+            builder: (c, s) => const ProductsListScreen(),
+          ),
         ],
       ),
     ],

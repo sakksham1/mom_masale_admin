@@ -7,7 +7,7 @@ class HomeShell extends StatelessWidget {
   final Widget child;
   const HomeShell({super.key, required this.child});
 
-  static const _tabs = ['/dashboard', '/orders', '/customers'];
+  static const _tabs = ['/dashboard', '/orders', '/customers', '/inventory'];
 
   int _indexForLocation(String location) {
     final i = _tabs.indexWhere((t) => location.startsWith(t));
@@ -24,10 +24,6 @@ class HomeShell extends StatelessWidget {
     final selectedIndex = onAccount ? -1 : _indexForLocation(location);
 
     return Scaffold(
-      // No bottomNavigationBar here — Scaffold paints an opaque Material
-      // behind that slot regardless of what you give it, which is what was
-      // blocking the content. Instead the bar is a Positioned overlay in
-      // this Stack, so the page content genuinely runs underneath it.
       body: Stack(
         children: [
           Positioned.fill(child: child),
@@ -72,8 +68,6 @@ class _FloatingNavBar extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(32),
       child: BackdropFilter(
-        // The blur is what makes content behind the bar read as "frosted
-        // glass" rather than a flat translucent rectangle.
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
           height: 64,
@@ -118,6 +112,13 @@ class _FloatingNavBar extends StatelessWidget {
                       label: 'Customers',
                       selected: selectedIndex == 2,
                       onTap: () => onTabTap(2),
+                    ),
+                    _NavIcon(
+                      icon: Icons.inventory_2_outlined,
+                      selectedIcon: Icons.inventory_2,
+                      label: 'Inventory',
+                      selected: selectedIndex == 3,
+                      onTap: () => onTabTap(3),
                     ),
                   ],
                 ),
