@@ -6,6 +6,7 @@ import '../../features/home_shell.dart';
 import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/orders/orders_list_screen.dart';
 import '../../features/customers/customers_list_screen.dart';
+import '../../features/account/account_screen.dart';
 
 GoRouter buildRouter(AuthController auth) {
   return GoRouter(
@@ -32,9 +33,16 @@ GoRouter buildRouter(AuthController auth) {
       ShellRoute(
         builder: (context, state, child) => HomeShell(child: child),
         routes: [
-          GoRoute(path: '/dashboard', builder: (c, s) => const DashboardScreen()),
+          GoRoute(
+            path: '/dashboard',
+            builder: (c, s) => const DashboardScreen(),
+          ),
           GoRoute(path: '/orders', builder: (c, s) => const OrdersListScreen()),
-          GoRoute(path: '/customers', builder: (c, s) => const CustomersListScreen()),
+          GoRoute(
+            path: '/customers',
+            builder: (c, s) => const CustomersListScreen(),
+          ),
+          GoRoute(path: '/me', builder: (c, s) => const AccountScreen()),
         ],
       ),
     ],

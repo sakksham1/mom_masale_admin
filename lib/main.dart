@@ -1,12 +1,17 @@
+import 'package:google_fonts/google_fonts.dart';
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'core/network/api_client.dart';
 import 'core/network/api_client_provider.dart';
 import 'core/router/app_router.dart';
+import 'core/theme/app_theme.dart';
+import 'core/theme/theme_mode_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  GoogleFonts.config.allowRuntimeFetching = false;
   final apiClient = ApiClient();
   await apiClient.init();
 
@@ -30,7 +35,6 @@ class _MyAppState extends ConsumerState<MyApp> {
   @override
   void initState() {
     super.initState();
-    // Restore session once the widget tree (and providers) are ready.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(authControllerProvider).restoreSession();
     });
@@ -39,16 +43,33 @@ class _MyAppState extends ConsumerState<MyApp> {
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authControllerProvider);
+    final themeMode = ref.watch(themeModeProvider);
     _router ??= buildRouter(auth);
 
-    if (auth.initializing) {
-      return const MaterialApp(home: Scaffold(body: Center(child: CircularProgressIndicator())));
-    }
+    return DynamicColorBuilder(
+      builder: (lightDynamic, darkDynamic) {
+        final lightTheme = AppTheme.light(lightDynamic);
+        final darkTheme = AppTheme.dark(darkDynamic);
 
-    return MaterialApp.router(
-      title: 'Mom Masale Admin',
-      theme: ThemeData(colorSchemeSeed: const Color(0xFF7B1120), useMaterial3: true),
-      routerConfig: _router,
+        if (auth.initializing) {
+          return MaterialApp(
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: themeMode,
+            home: const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        }
+
+        return MaterialApp.router(
+          title: 'Mom Masale Admin',
+          theme: lightTheme,
+          darkTheme: darkTheme,
+          themeMode: themeMode,
+          routerConfig: _router,
+        );
+      },
     );
   }
 }

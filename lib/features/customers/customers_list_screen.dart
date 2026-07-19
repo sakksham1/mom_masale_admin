@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'customers_provider.dart';
+import '../../core/utils/currency.dart';
 
 class CustomersListScreen extends ConsumerWidget {
   const CustomersListScreen({super.key});
-
-  String _rupee(int n) => '₹${n.toString().replaceAllMapped(
-    RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ',')}';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -28,29 +26,44 @@ class CustomersListScreen extends ConsumerWidget {
                 final c = customers[i];
                 return ListTile(
                   leading: CircleAvatar(
-                    child: Text(c.name.isNotEmpty ? c.name[0].toUpperCase() : '?'),
+                    child: Text(
+                      c.name.isNotEmpty ? c.name[0].toUpperCase() : '?',
+                    ),
                   ),
                   title: Row(
                     children: [
-                      Flexible(child: Text(c.name, overflow: TextOverflow.ellipsis)),
+                      Flexible(
+                        child: Text(c.name, overflow: TextOverflow.ellipsis),
+                      ),
                       if (c.isAdmin) ...[
                         const SizedBox(width: 6),
                         Chip(
-                          label: const Text('Admin', style: TextStyle(fontSize: 11)),
+                          label: const Text(
+                            'Admin',
+                            style: TextStyle(fontSize: 11),
+                          ),
                           visualDensity: VisualDensity.compact,
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
                         ),
                       ],
                     ],
                   ),
-                  subtitle: Text(c.phone != null ? '${c.email} · ${c.phone}' : c.email),
+                  subtitle: Text(
+                    c.phone != null ? '${c.email} · ${c.phone}' : c.email,
+                  ),
                   trailing: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(_rupee(c.lifetimeSpend), style: const TextStyle(fontWeight: FontWeight.bold)),
-                      Text('${c.orderCount} order${c.orderCount == 1 ? '' : 's'}',
-                          style: Theme.of(context).textTheme.bodySmall),
+                      Text(
+                        formatRupees(c.lifetimeSpend),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        '${c.orderCount} order${c.orderCount == 1 ? '' : 's'}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                     ],
                   ),
                 );

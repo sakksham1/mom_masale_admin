@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dashboard_provider.dart';
+import '../../core/utils/currency.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
-
-  String _rupee(int n) => '₹${n.toString().replaceAllMapped(
-    RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ',')}';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -28,15 +26,33 @@ class DashboardScreen extends ConsumerWidget {
                 crossAxisSpacing: 12,
                 childAspectRatio: 1.6,
                 children: [
-                  _StatCard(label: 'Total Revenue (paid)', value: _rupee(stats.totalRevenue)),
-                  _StatCard(label: 'Today · ${stats.todayOrders} order(s)', value: _rupee(stats.todayRevenue)),
-                  _StatCard(label: 'This Month · ${stats.monthOrders} order(s)', value: _rupee(stats.monthRevenue)),
-                  _StatCard(label: 'Pending Fulfilment', value: '${stats.pendingOrders}'),
-                  _StatCard(label: 'Registered Customers', value: '${stats.totalCustomers}'),
+                  _StatCard(
+                    label: 'Total Revenue (paid)',
+                    value: formatRupees(stats.totalRevenue),
+                  ),
+                  _StatCard(
+                    label: 'Today · ${stats.todayOrders} order(s)',
+                    value: formatRupees(stats.todayRevenue),
+                  ),
+                  _StatCard(
+                    label: 'This Month · ${stats.monthOrders} order(s)',
+                    value: formatRupees(stats.monthRevenue),
+                  ),
+                  _StatCard(
+                    label: 'Pending Fulfilment',
+                    value: '${stats.pendingOrders}',
+                  ),
+                  _StatCard(
+                    label: 'Registered Customers',
+                    value: '${stats.totalCustomers}',
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
-              Text('Top Products', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'Top Products',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 8),
               if (stats.topProducts.isEmpty)
                 const Padding(
@@ -44,14 +60,21 @@ class DashboardScreen extends ConsumerWidget {
                   child: Text('No paid orders yet.'),
                 )
               else
-                ...stats.topProducts.map((p) => ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(p.productName),
-                      trailing: Text('${p.totalQty} sold · ${_rupee(p.totalRevenue)}'),
-                    )),
+                ...stats.topProducts.map(
+                  (p) => ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(p.productName),
+                    trailing: Text(
+                      '${p.totalQty} sold · ${formatRupees(p.totalRevenue)}',
+                    ),
+                  ),
+                ),
               const SizedBox(height: 24),
-              Text('Recent Orders', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'Recent Orders',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 8),
               if (stats.recentOrders.isEmpty)
                 const Padding(
@@ -59,13 +82,18 @@ class DashboardScreen extends ConsumerWidget {
                   child: Text('No orders yet.'),
                 )
               else
-                ...stats.recentOrders.map((o) => ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      title: Text('#${o.id} — ${o.customerName}'),
-                      subtitle: Text('${o.status} · ${o.paymentStatus}'),
-                      trailing: Text(_rupee(o.total), style: const TextStyle(fontWeight: FontWeight.bold)),
-                    )),
+                ...stats.recentOrders.map(
+                  (o) => ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text('#${o.id} — ${o.customerName}'),
+                    subtitle: Text('${o.status} · ${o.paymentStatus}'),
+                    trailing: Text(
+                      formatRupees(o.total),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
             ],
           ),
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -89,9 +117,19 @@ class _StatCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(value, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              value,
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 4),
-            Text(label, style: Theme.of(context).textTheme.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ],
         ),
       ),
