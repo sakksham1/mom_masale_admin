@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'orders_provider.dart';
 import '../../core/constants/layout_constants.dart';
+import '../../shared/widgets/status_badge.dart';
 
 class OrdersTab extends ConsumerWidget {
   const OrdersTab({super.key});
@@ -25,6 +26,10 @@ class OrdersTab extends ConsumerWidget {
             itemBuilder: (context, i) {
               final o = orders[i];
               return ListTile(
+                leading: OrderStatusBadge(
+                  status: o.status,
+                  paymentStatus: o.paymentStatus,
+                ),
                 title: Text('#${o.id} — ${o.customerName}'),
                 subtitle: Text('${o.status} · ${o.paymentStatus}'),
                 trailing: Text('₹${o.total}'),

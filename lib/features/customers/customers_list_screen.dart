@@ -7,6 +7,7 @@ import '../../core/auth/user_role.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/utils/currency.dart';
 import '../../core/constants/layout_constants.dart';
+import '../../shared/widgets/status_badge.dart';
 
 const _assignableRoles = [
   UserRole.customer,
@@ -121,9 +122,7 @@ class _CustomerTileState extends ConsumerState<_CustomerTile> {
   Widget build(BuildContext context) {
     final c = widget.customer;
     return ListTile(
-      leading: CircleAvatar(
-        child: Text(c.name.isNotEmpty ? c.name[0].toUpperCase() : '?'),
-      ),
+      leading: RoleAvatar(role: c.role),
       title: Row(
         children: [
           Flexible(child: Text(c.name, overflow: TextOverflow.ellipsis)),
