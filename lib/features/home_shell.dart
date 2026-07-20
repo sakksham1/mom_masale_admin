@@ -7,6 +7,7 @@ import '../core/theme/app_colors.dart';
 import '../core/auth/route_permissions.dart';
 import '../core/network/api_client_provider.dart';
 import '../core/constants/layout_constants.dart';
+import '../features/approvals/approvals_provider.dart';
 
 class _NavItem {
   final String path;
@@ -68,6 +69,16 @@ class HomeShell extends ConsumerWidget {
         ? -1
         : tabs.indexWhere((t) => location.startsWith(t.path));
 
+    // Only watch the approvals queue if the role can even see that tab —
+    // no point polling it for roles (packaging, warehouser, salesperson)
+    // who never see the Approvals nav item at all.
+    final canSeeApprovals = tabs.any((t) => t.path == '/approvals');
+    final hasPendingApprovals = canSeeApprovals
+        ? ref
+              .watch(approvalsQueueProvider)
+              .maybeWhen(data: (q) => !q.isEmpty, orElse: () => false)
+        : false;
+
     return Scaffold(
       body: Stack(
         children: [
@@ -83,6 +94,7 @@ class HomeShell extends ConsumerWidget {
                 selectedIndex: selectedIndex,
                 onAccount: onAccount,
                 scheme: scheme,
+                showApprovalsDot: hasPendingApprovals,
                 onTabTap: (i) => context.go(tabs[i].path),
                 onAccountTap: () => context.go('/me'),
               ),
@@ -99,6 +111,7 @@ class _FloatingNavBar extends StatelessWidget {
   final int selectedIndex;
   final bool onAccount;
   final ColorScheme scheme;
+  final bool showApprovalsDot;
   final ValueChanged<int> onTabTap;
   final VoidCallback onAccountTap;
 
@@ -107,6 +120,7 @@ class _FloatingNavBar extends StatelessWidget {
     required this.selectedIndex,
     required this.onAccount,
     required this.scheme,
+    required this.showApprovalsDot,
     required this.onTabTap,
     required this.onAccountTap,
   });
@@ -146,6 +160,8 @@ class _FloatingNavBar extends StatelessWidget {
                         selectedIcon: tabs[i].selectedIcon,
                         label: tabs[i].label,
                         selected: selectedIndex == i,
+                        showDot:
+                            tabs[i].path == '/approvals' && showApprovalsDot,
                         onTap: () => onTabTap(i),
                       ),
                   ],
@@ -178,6 +194,7 @@ class _NavIcon extends StatelessWidget {
   final String label;
   final bool selected;
   final bool accent;
+  final bool showDot;
   final VoidCallback onTap;
 
   const _NavIcon({
@@ -187,6 +204,7 @@ class _NavIcon extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.accent = false,
+    this.showDot = false,
   });
 
   @override
@@ -203,7 +221,29 @@ class _NavIcon extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(selected ? selectedIcon : icon, color: color, size: 24),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(selected ? selectedIcon : icon, color: color, size: 24),
+                if (showDot)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      width: 9,
+                      height: 9,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFC62828),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: scheme.surfaceContainerHigh,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: 2),
             Text(
               label,
