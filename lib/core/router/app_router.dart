@@ -1,16 +1,15 @@
+// lib/core/router/app_router.dart
 import 'package:go_router/go_router.dart';
 import '../auth/auth_controller.dart';
 import '../auth/route_permissions.dart';
 import '../auth/login_screen.dart';
 import '../../features/home_shell.dart';
 import '../../features/dashboard/dashboard_screen.dart';
-import '../../features/orders/orders_list_screen.dart';
-import '../../features/warehouse/warehouse_screen.dart';
+import '../../features/business/business_screen.dart';
+import '../../features/stock/stock_screen.dart';
 import '../../features/sales/sales_screen.dart';
 import '../../features/approvals/approvals_screen.dart';
-import '../../features/customers/customers_list_screen.dart';
 import '../../features/account/account_screen.dart';
-import '../../features/products/products_list_screen.dart';
 import '../auth/user_role.dart';
 import '../../features/packaging/packaging_submit_screen.dart';
 import '../../features/packaging/packaging_history_screen.dart';
@@ -24,7 +23,6 @@ GoRouter buildRouter(AuthController auth) {
 
       final loggedIn = auth.isLoggedIn;
       final loggingIn = state.matchedLocation == '/login';
-      // NEW: not logged in and not already heading to /login — send them there.
       if (!loggedIn && !loggingIn) {
         return '/login';
       }
@@ -36,15 +34,13 @@ GoRouter buildRouter(AuthController auth) {
           case UserRole.salesperson:
             return '/sales';
           case UserRole.warehouser:
-            return '/warehouse';
+            return '/stock';
           default:
             return '/dashboard';
         }
       }
 
       if (loggedIn && !canAccessRoute(state.matchedLocation, auth.role)) {
-        // Logged in but this role isn't permitted here — bounce to login
-        // with an explanation rather than silently failing.
         return '/login?denied=1';
       }
       return null;
@@ -58,16 +54,9 @@ GoRouter buildRouter(AuthController auth) {
             path: '/dashboard',
             builder: (c, s) => const DashboardScreen(),
           ),
-          GoRoute(path: '/orders', builder: (c, s) => const OrdersListScreen()),
-          GoRoute(
-            path: '/customers',
-            builder: (c, s) => const CustomersListScreen(),
-          ),
+          GoRoute(path: '/business', builder: (c, s) => const BusinessScreen()),
           GoRoute(path: '/me', builder: (c, s) => const AccountScreen()),
-          GoRoute(
-            path: '/inventory',
-            builder: (c, s) => const ProductsListScreen(),
-          ),
+          GoRoute(path: '/stock', builder: (c, s) => const StockScreen()),
           GoRoute(
             path: '/packaging',
             builder: (c, s) => const PackagingSubmitScreen(),
@@ -75,14 +64,6 @@ GoRouter buildRouter(AuthController auth) {
           GoRoute(
             path: '/packaging/history',
             builder: (c, s) => const PackagingHistoryScreen(),
-          ),
-          GoRoute(
-            path: '/packaging/history',
-            builder: (c, s) => const PackagingHistoryScreen(),
-          ),
-          GoRoute(
-            path: '/warehouse',
-            builder: (c, s) => const WarehouseScreen(),
           ),
           GoRoute(path: '/sales', builder: (c, s) => const SalesScreen()),
           GoRoute(

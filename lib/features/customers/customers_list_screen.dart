@@ -1,3 +1,4 @@
+// lib/features/customers/customers_list_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'customers_api.dart';
@@ -5,6 +6,7 @@ import 'customers_provider.dart';
 import '../../core/auth/user_role.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/utils/currency.dart';
+import '../../core/constants/layout_constants.dart';
 
 const _assignableRoles = [
   UserRole.customer,
@@ -34,32 +36,31 @@ String _roleLabel(UserRole role) {
   }
 }
 
-class CustomersListScreen extends ConsumerWidget {
-  const CustomersListScreen({super.key});
+class CustomersTab extends ConsumerWidget {
+  const CustomersTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final customersAsync = ref.watch(customersProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Customers')),
-      body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(customersProvider),
-        child: customersAsync.when(
-          data: (customers) {
-            if (customers.isEmpty) {
-              return const Center(child: Text('No registered customers yet.'));
-            }
-            return ListView.separated(
-              itemCount: customers.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (context, i) =>
-                  _CustomerTile(customer: customers[i]),
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Could not load customers: $e')),
-        ),
+    return RefreshIndicator(
+      onRefresh: () async => ref.invalidate(customersProvider),
+      child: customersAsync.when(
+        data: (customers) {
+          if (customers.isEmpty) {
+            return const Center(child: Text('No registered customers yet.'));
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.only(
+              bottom: LayoutConstants.navBarClearance,
+            ),
+            itemCount: customers.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (context, i) => _CustomerTile(customer: customers[i]),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('Could not load customers: $e')),
       ),
     );
   }

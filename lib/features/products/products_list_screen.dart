@@ -1,34 +1,36 @@
+// lib/features/products/products_list_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'products_api.dart';
 import 'products_provider.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/utils/currency.dart';
+import '../../core/constants/layout_constants.dart';
 
-class ProductsListScreen extends ConsumerWidget {
-  const ProductsListScreen({super.key});
+class InventoryTab extends ConsumerWidget {
+  const InventoryTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final productsAsync = ref.watch(productsProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Inventory')),
-      body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(productsProvider),
-        child: productsAsync.when(
-          data: (products) {
-            if (products.isEmpty) {
-              return const Center(child: Text('No products yet.'));
-            }
-            return ListView.builder(
-              itemCount: products.length,
-              itemBuilder: (context, i) => _ProductTile(product: products[i]),
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Could not load products: $e')),
-        ),
+    return RefreshIndicator(
+      onRefresh: () async => ref.invalidate(productsProvider),
+      child: productsAsync.when(
+        data: (products) {
+          if (products.isEmpty) {
+            return const Center(child: Text('No products yet.'));
+          }
+          return ListView.builder(
+            padding: const EdgeInsets.only(
+              bottom: LayoutConstants.navBarClearance,
+            ),
+            itemCount: products.length,
+            itemBuilder: (context, i) => _ProductTile(product: products[i]),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('Could not load products: $e')),
       ),
     );
   }

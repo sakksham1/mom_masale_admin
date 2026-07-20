@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'sales_api.dart';
 import 'sales_provider.dart';
 import '../packaging/packaging_api.dart' show StaffProduct;
 import '../packaging/packaging_provider.dart' show staffProductsProvider;
 import '../../core/network/api_exception.dart';
 import '../../core/utils/currency.dart';
+import '../../core/constants/layout_constants.dart';
 
 class SalesScreen extends ConsumerWidget {
   const SalesScreen({super.key});
@@ -17,10 +17,15 @@ class SalesScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Sales')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openSubmitFlow(context, ref),
-        icon: const Icon(Icons.add),
-        label: const Text('Report Sale'),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(
+          bottom: LayoutConstants.fabScaffoldExtraPadding,
+        ),
+        child: FloatingActionButton.extended(
+          onPressed: () => _openSubmitFlow(context, ref),
+          icon: const Icon(Icons.add),
+          label: const Text('Report Sale'),
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -28,7 +33,12 @@ class SalesScreen extends ConsumerWidget {
           ref.invalidate(mySalesReportsProvider);
         },
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+          padding: const EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            LayoutConstants.navBarClearance,
+          ),
           children: [
             Text('My Totals', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),

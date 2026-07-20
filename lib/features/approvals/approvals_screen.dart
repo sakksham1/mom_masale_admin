@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'approvals_api.dart';
 import 'approvals_provider.dart';
 import '../../core/network/api_exception.dart';
+import '../../core/constants/layout_constants.dart';
 
 class ApprovalsScreen extends ConsumerWidget {
   const ApprovalsScreen({super.key});
@@ -19,6 +19,12 @@ class ApprovalsScreen extends ConsumerWidget {
           data: (queue) {
             if (queue.isEmpty) {
               return ListView(
+                padding: const EdgeInsets.fromLTRB(
+                  16,
+                  16,
+                  16,
+                  LayoutConstants.navBarClearance,
+                ),
                 children: const [
                   Padding(
                     padding: EdgeInsets.all(24),
@@ -30,7 +36,12 @@ class ApprovalsScreen extends ConsumerWidget {
               );
             }
             return ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                LayoutConstants.navBarClearance,
+              ),
               children: [
                 if (queue.rawMaterial.isNotEmpty) ...[
                   _SectionHeader('Raw Material Adjustments'),

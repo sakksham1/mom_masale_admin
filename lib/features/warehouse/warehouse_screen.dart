@@ -1,3 +1,4 @@
+// lib/features/warehouse/warehouse_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'raw_materials_api.dart';
@@ -5,9 +6,10 @@ import 'raw_materials_provider.dart';
 import '../../core/auth/user_role.dart';
 import '../../core/network/api_client_provider.dart';
 import '../../core/network/api_exception.dart';
+import '../../core/constants/layout_constants.dart';
 
-class WarehouseScreen extends ConsumerWidget {
-  const WarehouseScreen({super.key});
+class WarehouseTab extends ConsumerWidget {
+  const WarehouseTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -15,34 +17,41 @@ class WarehouseScreen extends ConsumerWidget {
     final role = ref.watch(authControllerProvider).role;
     final canManage = role == UserRole.warehouser;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Raw Materials')),
-      floatingActionButton: canManage
-          ? FloatingActionButton.extended(
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: () async => ref.invalidate(rawMaterialsProvider),
+          child: materialsAsync.when(
+            data: (materials) {
+              if (materials.isEmpty) {
+                return const Center(child: Text('No raw materials yet.'));
+              }
+              return ListView.separated(
+                padding: const EdgeInsets.only(
+                  bottom: LayoutConstants.navBarClearance,
+                ),
+                itemCount: materials.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, i) =>
+                    _MaterialTile(material: materials[i], canManage: canManage),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) =>
+                Center(child: Text('Could not load raw materials: $e')),
+          ),
+        ),
+        if (canManage)
+          Positioned(
+            right: 16,
+            bottom: LayoutConstants.navBarClearance,
+            child: FloatingActionButton.extended(
               onPressed: () => _addMaterial(context, ref),
               icon: const Icon(Icons.add),
               label: const Text('Add Material'),
-            )
-          : null,
-      body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(rawMaterialsProvider),
-        child: materialsAsync.when(
-          data: (materials) {
-            if (materials.isEmpty) {
-              return const Center(child: Text('No raw materials yet.'));
-            }
-            return ListView.separated(
-              itemCount: materials.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (context, i) =>
-                  _MaterialTile(material: materials[i], canManage: canManage),
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) =>
-              Center(child: Text('Could not load raw materials: $e')),
-        ),
-      ),
+            ),
+          ),
+      ],
     );
   }
 

@@ -4,6 +4,7 @@ import '../../core/network/api_client_provider.dart';
 import '../../core/theme/app_colors.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/auth/route_permissions.dart';
+import '../../core/constants/layout_constants.dart';
 
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
@@ -17,7 +18,12 @@ class AccountScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Me')),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          LayoutConstants.navBarClearance,
+        ),
         children: [
           Center(
             child: CircleAvatar(
@@ -146,18 +152,14 @@ String _routeLabel(String path) {
   switch (path) {
     case '/dashboard':
       return 'Dashboard';
-    case '/orders':
-      return 'Orders';
-    case '/customers':
-      return 'Customers';
-    case '/inventory':
-      return 'Inventory';
+    case '/business':
+      return 'Business';
+    case '/stock':
+      return 'Stock';
     case '/packaging':
       return 'Report Packaging';
     case '/packaging/history':
       return 'Packaging History';
-    case '/warehouse':
-      return 'Warehouse';
     case '/sales':
       return 'Sales';
     case '/approvals':

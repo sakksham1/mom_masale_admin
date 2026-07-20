@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'packaging_api.dart';
 import 'packaging_provider.dart';
 import '../../core/network/api_exception.dart';
+import '../../core/constants/layout_constants.dart';
 
 class PackagingSubmitScreen extends ConsumerStatefulWidget {
   const PackagingSubmitScreen({super.key});
@@ -72,7 +73,12 @@ class _PackagingSubmitScreenState extends ConsumerState<PackagingSubmitScreen> {
       ),
       body: productsAsync.when(
         data: (products) => SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            LayoutConstants.navBarClearance,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

@@ -1,3 +1,4 @@
+// lib/features/home_shell.dart
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
 import '../core/auth/route_permissions.dart';
 import '../core/network/api_client_provider.dart';
+import '../core/constants/layout_constants.dart';
 
 class _NavItem {
   final String path;
@@ -13,38 +15,29 @@ class _NavItem {
   const _NavItem(this.path, this.icon, this.selectedIcon, this.label);
 }
 
+// Consolidated: each entry may represent multiple merged screens (e.g.
+// "Business" = Orders + Customers, "Stock" = Inventory + Warehouse) so the
+// nav never overflows regardless of how many permissions a role has.
 const _allNavItems = [
   _NavItem('/dashboard', Icons.dashboard_outlined, Icons.dashboard, 'Overview'),
   _NavItem(
-    '/orders',
-    Icons.receipt_long_outlined,
-    Icons.receipt_long,
-    'Orders',
+    '/business',
+    Icons.storefront_outlined,
+    Icons.storefront,
+    'Business',
   ),
-  _NavItem('/customers', Icons.people_outline, Icons.people, 'Customers'),
+  _NavItem('/stock', Icons.inventory_2_outlined, Icons.inventory_2, 'Stock'),
   _NavItem(
-    '/inventory',
-    Icons.inventory_2_outlined,
-    Icons.inventory_2,
-    'Inventory',
-  ),
-  _NavItem(
-    '/warehouse',
-    Icons.warehouse_outlined,
-    Icons.warehouse,
-    'Warehouse',
+    '/approvals',
+    Icons.fact_check_outlined,
+    Icons.fact_check,
+    'Approvals',
   ),
   _NavItem(
     '/sales',
     Icons.point_of_sale_outlined,
     Icons.point_of_sale,
     'Sales',
-  ),
-  _NavItem(
-    '/approvals',
-    Icons.fact_check_outlined,
-    Icons.fact_check,
-    'Approvals',
   ),
   _NavItem(
     '/packaging',
@@ -66,8 +59,6 @@ class HomeShell extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final role = ref.watch(authControllerProvider).role;
 
-    // Only show tabs this role is actually permitted to open — avoids the
-    // "tap a tab, get silently bounced to /login?denied=1" trap.
     final tabs = _allNavItems
         .where((i) => canAccessRoute(i.path, role))
         .toList();
@@ -84,7 +75,7 @@ class HomeShell extends ConsumerWidget {
           Positioned(
             left: 20,
             right: 20,
-            bottom: 16,
+            bottom: LayoutConstants.navBarBottomMargin,
             child: SafeArea(
               top: false,
               child: _FloatingNavBar(
@@ -127,7 +118,7 @@ class _FloatingNavBar extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
-          height: 64,
+          height: LayoutConstants.navBarHeight,
           padding: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
             color: scheme.surfaceContainerHigh.withValues(alpha: 0.72),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dashboard_provider.dart';
 import '../../core/utils/currency.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/constants/layout_constants.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -17,7 +18,12 @@ class DashboardScreen extends ConsumerWidget {
         onRefresh: () async => ref.invalidate(dashboardStatsProvider),
         child: statsAsync.when(
           data: (stats) => ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(
+              16,
+              16,
+              16,
+              LayoutConstants.navBarClearance,
+            ),
             children: [
               GridView.count(
                 crossAxisCount: 2,

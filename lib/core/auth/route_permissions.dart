@@ -1,9 +1,9 @@
+// lib/core/auth/route_permissions.dart
 import 'user_role.dart';
 
 const Map<String, Set<UserRole>> routePermissions = {
   '/dashboard': {UserRole.admin, UserRole.manager},
-  '/orders': {UserRole.admin},
-  '/customers': {UserRole.admin},
+  '/business': {UserRole.admin},
   '/me': {
     UserRole.admin,
     UserRole.manager,
@@ -11,15 +11,14 @@ const Map<String, Set<UserRole>> routePermissions = {
     UserRole.packaging,
     UserRole.salesperson,
   },
-  '/inventory': {UserRole.admin},
-  '/packaging': {UserRole.packaging},
-  '/packaging/history': {UserRole.packaging},
-  '/warehouse': {
+  '/stock': {
+    UserRole.admin,
+    UserRole.manager,
     UserRole.warehouser,
     UserRole.packaging,
-    UserRole.manager,
-    UserRole.admin,
   },
+  '/packaging': {UserRole.packaging},
+  '/packaging/history': {UserRole.packaging},
   '/sales': {UserRole.salesperson},
   '/approvals': {UserRole.manager, UserRole.admin},
 };

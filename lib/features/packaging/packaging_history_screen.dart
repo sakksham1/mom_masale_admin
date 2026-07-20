@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'packaging_provider.dart';
+import '../../core/constants/layout_constants.dart';
 
 class PackagingHistoryScreen extends ConsumerWidget {
   const PackagingHistoryScreen({super.key});
@@ -29,6 +30,9 @@ class PackagingHistoryScreen extends ConsumerWidget {
             if (reports.isEmpty)
               return const Center(child: Text('No reports yet.'));
             return ListView.separated(
+              padding: const EdgeInsets.only(
+                bottom: LayoutConstants.navBarClearance,
+              ),
               itemCount: reports.length,
               separatorBuilder: (_, __) => const Divider(height: 1),
               itemBuilder: (context, i) {
