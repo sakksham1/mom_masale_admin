@@ -21,6 +21,10 @@ GoRouter buildRouter(AuthController auth) {
 
       final loggedIn = auth.isLoggedIn;
       final loggingIn = state.matchedLocation == '/login';
+      // NEW: not logged in and not already heading to /login — send them there.
+      if (!loggedIn && !loggingIn) {
+        return '/login';
+      }
 
       if (loggedIn && loggingIn) {
         switch (auth.role) {

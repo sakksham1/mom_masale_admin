@@ -27,8 +27,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       final auth = ref.read(authControllerProvider);
       await auth.login(_emailCtrl.text.trim(), _passwordCtrl.text);
-      if (auth.role != UserRole.admin) {
-        _error = 'This account does not have admin access.';
+
+      const staffRoles = {
+        UserRole.admin,
+        UserRole.manager,
+        UserRole.warehouser,
+        UserRole.packaging,
+        UserRole.salesperson,
+      };
+
+      if (!staffRoles.contains(auth.role)) {
+        _error = 'This account does not have staff access.';
         await auth.logout();
       }
     } on ApiException catch (e) {
