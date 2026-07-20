@@ -8,6 +8,9 @@ import '../../features/orders/orders_list_screen.dart';
 import '../../features/customers/customers_list_screen.dart';
 import '../../features/account/account_screen.dart';
 import '../../features/products/products_list_screen.dart';
+import '../auth/user_role.dart';
+import '../../features/packaging/packaging_submit_screen.dart';
+import '../../features/packaging/packaging_history_screen.dart';
 
 GoRouter buildRouter(AuthController auth) {
   return GoRouter(
@@ -19,8 +22,18 @@ GoRouter buildRouter(AuthController auth) {
       final loggedIn = auth.isLoggedIn;
       final loggingIn = state.matchedLocation == '/login';
 
-      if (!loggedIn && !loggingIn) return '/login';
-      if (loggedIn && loggingIn) return '/dashboard';
+      if (loggedIn && loggingIn) {
+        switch (auth.role) {
+          case UserRole.packaging:
+            return '/packaging';
+          case UserRole.salesperson:
+            return '/sales';
+          case UserRole.warehouser:
+            return '/warehouse';
+          default:
+            return '/dashboard';
+        }
+      }
 
       if (loggedIn && !canAccessRoute(state.matchedLocation, auth.role)) {
         // Logged in but this role isn't permitted here — bounce to login
@@ -47,6 +60,14 @@ GoRouter buildRouter(AuthController auth) {
           GoRoute(
             path: '/inventory',
             builder: (c, s) => const ProductsListScreen(),
+          ),
+          GoRoute(
+            path: '/packaging',
+            builder: (c, s) => const PackagingSubmitScreen(),
+          ),
+          GoRoute(
+            path: '/packaging/history',
+            builder: (c, s) => const PackagingHistoryScreen(),
           ),
         ],
       ),

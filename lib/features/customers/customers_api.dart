@@ -10,9 +10,14 @@ class Customer {
   final int orderCount, lifetimeSpend;
 
   Customer({
-    required this.id, required this.name, required this.email, this.phone,
-    required this.role, required this.createdAt,
-    required this.orderCount, required this.lifetimeSpend,
+    required this.id,
+    required this.name,
+    required this.email,
+    this.phone,
+    required this.role,
+    required this.createdAt,
+    required this.orderCount,
+    required this.lifetimeSpend,
   });
 
   /// Kept so existing UI code (the "Admin" chip in customers_list_screen.dart)
@@ -38,6 +43,12 @@ class CustomersApi {
 
   Future<List<Customer>> fetchCustomers() async {
     final res = await client.get('/api/admin/customers');
-    return (res.data['customers'] as List).map((c) => Customer.fromJson(c)).toList();
+    return (res.data['customers'] as List)
+        .map((c) => Customer.fromJson(c))
+        .toList();
+  }
+
+  Future<void> updateRole(int userId, String role) {
+    return client.patch('/api/admin/roles', {'userId': userId, 'role': role});
   }
 }
