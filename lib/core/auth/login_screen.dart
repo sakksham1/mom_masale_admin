@@ -5,6 +5,7 @@ import '../../core/network/api_exception.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/brand_logo.dart';
 import 'user_role.dart';
+import 'package:go_router/go_router.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -51,6 +52,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final denied =
+        GoRouterState.of(context).uri.queryParameters['denied'] == '1';
 
     return Scaffold(
       body: Container(
@@ -117,6 +120,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ),
                           const SizedBox(height: 24),
+                          if (denied) ...[
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              margin: const EdgeInsets.only(bottom: 16),
+                              decoration: BoxDecoration(
+                                color: AppColors.paprika.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: AppColors.paprika.withValues(
+                                    alpha: 0.3,
+                                  ),
+                                ),
+                              ),
+                              child: const Text(
+                                "Your account doesn't have access to that page. "
+                                'Please sign in with an account that has the right role.',
+                                style: TextStyle(
+                                  color: AppColors.paprika,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
                           TextField(
                             controller: _emailCtrl,
                             keyboardType: TextInputType.emailAddress,

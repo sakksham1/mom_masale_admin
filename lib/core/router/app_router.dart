@@ -5,6 +5,9 @@ import '../auth/login_screen.dart';
 import '../../features/home_shell.dart';
 import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/orders/orders_list_screen.dart';
+import '../../features/warehouse/warehouse_screen.dart';
+import '../../features/sales/sales_screen.dart';
+import '../../features/approvals/approvals_screen.dart';
 import '../../features/customers/customers_list_screen.dart';
 import '../../features/account/account_screen.dart';
 import '../../features/products/products_list_screen.dart';
@@ -72,6 +75,19 @@ GoRouter buildRouter(AuthController auth) {
           GoRoute(
             path: '/packaging/history',
             builder: (c, s) => const PackagingHistoryScreen(),
+          ),
+          GoRoute(
+            path: '/packaging/history',
+            builder: (c, s) => const PackagingHistoryScreen(),
+          ),
+          GoRoute(
+            path: '/warehouse',
+            builder: (c, s) => const WarehouseScreen(),
+          ),
+          GoRoute(path: '/sales', builder: (c, s) => const SalesScreen()),
+          GoRoute(
+            path: '/approvals',
+            builder: (c, s) => const ApprovalsScreen(),
           ),
         ],
       ),

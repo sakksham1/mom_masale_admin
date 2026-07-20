@@ -1,27 +1,81 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
+import '../core/auth/route_permissions.dart';
+import '../core/network/api_client_provider.dart';
 
-class HomeShell extends StatelessWidget {
+class _NavItem {
+  final String path;
+  final IconData icon, selectedIcon;
+  final String label;
+  const _NavItem(this.path, this.icon, this.selectedIcon, this.label);
+}
+
+const _allNavItems = [
+  _NavItem('/dashboard', Icons.dashboard_outlined, Icons.dashboard, 'Overview'),
+  _NavItem(
+    '/orders',
+    Icons.receipt_long_outlined,
+    Icons.receipt_long,
+    'Orders',
+  ),
+  _NavItem('/customers', Icons.people_outline, Icons.people, 'Customers'),
+  _NavItem(
+    '/inventory',
+    Icons.inventory_2_outlined,
+    Icons.inventory_2,
+    'Inventory',
+  ),
+  _NavItem(
+    '/warehouse',
+    Icons.warehouse_outlined,
+    Icons.warehouse,
+    'Warehouse',
+  ),
+  _NavItem(
+    '/sales',
+    Icons.point_of_sale_outlined,
+    Icons.point_of_sale,
+    'Sales',
+  ),
+  _NavItem(
+    '/approvals',
+    Icons.fact_check_outlined,
+    Icons.fact_check,
+    'Approvals',
+  ),
+  _NavItem(
+    '/packaging',
+    Icons.inventory_outlined,
+    Icons.inventory,
+    'Packaging',
+  ),
+];
+
+class HomeShell extends ConsumerWidget {
   final Widget child;
   const HomeShell({super.key, required this.child});
-
-  static const _tabs = ['/dashboard', '/orders', '/customers', '/inventory'];
-
-  int _indexForLocation(String location) {
-    final i = _tabs.indexWhere((t) => location.startsWith(t));
-    return i == -1 ? 0 : i;
-  }
 
   bool _onAccountPage(String location) => location.startsWith('/me');
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).matchedLocation;
     final scheme = Theme.of(context).colorScheme;
+    final role = ref.watch(authControllerProvider).role;
+
+    // Only show tabs this role is actually permitted to open — avoids the
+    // "tap a tab, get silently bounced to /login?denied=1" trap.
+    final tabs = _allNavItems
+        .where((i) => canAccessRoute(i.path, role))
+        .toList();
+
     final onAccount = _onAccountPage(location);
-    final selectedIndex = onAccount ? -1 : _indexForLocation(location);
+    final selectedIndex = onAccount
+        ? -1
+        : tabs.indexWhere((t) => location.startsWith(t.path));
 
     return Scaffold(
       body: Stack(
@@ -34,10 +88,11 @@ class HomeShell extends StatelessWidget {
             child: SafeArea(
               top: false,
               child: _FloatingNavBar(
+                tabs: tabs,
                 selectedIndex: selectedIndex,
                 onAccount: onAccount,
                 scheme: scheme,
-                onTabTap: (i) => context.go(_tabs[i]),
+                onTabTap: (i) => context.go(tabs[i].path),
                 onAccountTap: () => context.go('/me'),
               ),
             ),
@@ -49,6 +104,7 @@ class HomeShell extends StatelessWidget {
 }
 
 class _FloatingNavBar extends StatelessWidget {
+  final List<_NavItem> tabs;
   final int selectedIndex;
   final bool onAccount;
   final ColorScheme scheme;
@@ -56,6 +112,7 @@ class _FloatingNavBar extends StatelessWidget {
   final VoidCallback onAccountTap;
 
   const _FloatingNavBar({
+    required this.tabs,
     required this.selectedIndex,
     required this.onAccount,
     required this.scheme,
@@ -92,34 +149,14 @@ class _FloatingNavBar extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _NavIcon(
-                      icon: Icons.dashboard_outlined,
-                      selectedIcon: Icons.dashboard,
-                      label: 'Overview',
-                      selected: selectedIndex == 0,
-                      onTap: () => onTabTap(0),
-                    ),
-                    _NavIcon(
-                      icon: Icons.receipt_long_outlined,
-                      selectedIcon: Icons.receipt_long,
-                      label: 'Orders',
-                      selected: selectedIndex == 1,
-                      onTap: () => onTabTap(1),
-                    ),
-                    _NavIcon(
-                      icon: Icons.people_outline,
-                      selectedIcon: Icons.people,
-                      label: 'Customers',
-                      selected: selectedIndex == 2,
-                      onTap: () => onTabTap(2),
-                    ),
-                    _NavIcon(
-                      icon: Icons.inventory_2_outlined,
-                      selectedIcon: Icons.inventory_2,
-                      label: 'Inventory',
-                      selected: selectedIndex == 3,
-                      onTap: () => onTabTap(3),
-                    ),
+                    for (var i = 0; i < tabs.length; i++)
+                      _NavIcon(
+                        icon: tabs[i].icon,
+                        selectedIcon: tabs[i].selectedIcon,
+                        label: tabs[i].label,
+                        selected: selectedIndex == i,
+                        onTap: () => onTabTap(i),
+                      ),
                   ],
                 ),
               ),

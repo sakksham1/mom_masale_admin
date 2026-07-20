@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/api_client_provider.dart';
 import '../../core/theme/app_colors.dart';
+import 'package:go_router/go_router.dart';
+import '../../core/auth/route_permissions.dart';
 
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
@@ -73,6 +75,25 @@ class AccountScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
+          if (user != null) ...[
+            Text('Quick Links', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: routePermissions.entries
+                  .where((e) => e.key != '/me' && e.value.contains(user.role))
+                  .map(
+                    (e) => ActionChip(
+                      label: Text(_routeLabel(e.key)),
+                      onPressed: () => context.push(e.key),
+                    ),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: 24),
+          ],
+          const SizedBox(height: 24),
           FilledButton.icon(
             style: FilledButton.styleFrom(
               backgroundColor: scheme.errorContainer,
@@ -118,5 +139,30 @@ class _InfoRow extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+String _routeLabel(String path) {
+  switch (path) {
+    case '/dashboard':
+      return 'Dashboard';
+    case '/orders':
+      return 'Orders';
+    case '/customers':
+      return 'Customers';
+    case '/inventory':
+      return 'Inventory';
+    case '/packaging':
+      return 'Report Packaging';
+    case '/packaging/history':
+      return 'Packaging History';
+    case '/warehouse':
+      return 'Warehouse';
+    case '/sales':
+      return 'Sales';
+    case '/approvals':
+      return 'Approvals';
+    default:
+      return path;
   }
 }

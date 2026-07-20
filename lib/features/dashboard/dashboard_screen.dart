@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dashboard_provider.dart';
 import '../../core/utils/currency.dart';
+import 'package:go_router/go_router.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -47,6 +48,15 @@ class DashboardScreen extends ConsumerWidget {
                     value: '${stats.totalCustomers}',
                   ),
                 ],
+              ),
+              const SizedBox(height: 16),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.fact_check_outlined),
+                  title: const Text('Pending Approvals'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/approvals'),
+                ),
               ),
               const SizedBox(height: 24),
               Text(
