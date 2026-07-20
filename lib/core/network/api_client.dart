@@ -18,9 +18,7 @@ class ApiClient {
 
   Future<void> init() async {
     if (kIsWeb) {
-      cookieJar =
-          CookieJar() as PersistCookieJar? ??
-          (throw UnsupportedError('unreachable'));
+      cookieJar = CookieJar();
     } else {
       final dir = await getApplicationDocumentsDirectory();
       cookieJar = PersistCookieJar(

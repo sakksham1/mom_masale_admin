@@ -6,6 +6,7 @@ import '../../core/network/api_exception.dart';
 import '../../core/constants/layout_constants.dart';
 import '../../core/utils/haptics.dart';
 import '../../shared/widgets/success_pulse.dart';
+import 'package:go_router/go_router.dart';
 
 class PackagingSubmitScreen extends ConsumerStatefulWidget {
   const PackagingSubmitScreen({super.key});
@@ -74,8 +75,7 @@ class _PackagingSubmitScreenState extends ConsumerState<PackagingSubmitScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.history),
-            onPressed: () =>
-                Navigator.of(context).pushNamed('/packaging/history'),
+            onPressed: () => context.push('/packaging/history'),
           ),
         ],
       ),

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'packaging_api.dart';
 import 'packaging_provider.dart';
 import '../../core/utils/haptics.dart';
-import '../../core/constants/layout_constants.dart';
 import '../../shared/widgets/tap_scale.dart';
 import '../../shared/widgets/success_pulse.dart';
 import '../../shared/widgets/staggered_fade_in.dart';
@@ -106,6 +105,7 @@ class _PackagingBulkReportScreenState
   @override
   Widget build(BuildContext context) {
     final productsAsync = ref.watch(staffProductsProvider);
+    final products = productsAsync.valueOrNull;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Bulk Report Packaging')),
@@ -114,6 +114,11 @@ class _PackagingBulkReportScreenState
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Could not load products: $e')),
       ),
+      // Pinned to the Scaffold's dedicated bottom slot instead of being the
+      // last item in a scrolling Column — it now always gets guaranteed
+      // screen space regardless of list length or how many items are
+      // selected, which was the root cause of the button being unreachable.
+      bottomNavigationBar: products == null ? null : _buildSubmitBar(products),
     );
   }
 
@@ -150,10 +155,7 @@ class _PackagingBulkReportScreenState
           child: filtered.isEmpty
               ? const Center(child: Text('No matching products.'))
               : ListView.builder(
-                  padding: const EdgeInsets.only(
-                    top: 8,
-                    bottom: LayoutConstants.navBarClearance,
-                  ),
+                  padding: const EdgeInsets.only(top: 8, bottom: 8),
                   itemCount: filtered.length,
                   itemBuilder: (context, i) => StaggeredFadeIn(
                     key: ValueKey('fade_${filtered[i].id}'),
@@ -167,7 +169,6 @@ class _PackagingBulkReportScreenState
                   ),
                 ),
         ),
-        _buildSubmitBar(products),
       ],
     );
   }
