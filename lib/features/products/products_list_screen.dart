@@ -6,6 +6,7 @@ import 'products_provider.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/utils/currency.dart';
 import '../../core/constants/layout_constants.dart';
+import '../../shared/widgets/product_avatar.dart';
 
 class InventoryTab extends ConsumerWidget {
   const InventoryTab({super.key});
@@ -49,9 +50,7 @@ class _ProductTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ExpansionTile(
-      leading: product.image.isNotEmpty
-          ? CircleAvatar(backgroundImage: NetworkImage(product.image))
-          : const CircleAvatar(child: Icon(Icons.image_not_supported_outlined)),
+      leading: ProductAvatar(image: product.image),
       title: Text(product.name),
       subtitle: Row(
         children: [

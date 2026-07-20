@@ -13,6 +13,8 @@ import '../../features/account/account_screen.dart';
 import '../auth/user_role.dart';
 import '../../features/packaging/packaging_submit_screen.dart';
 import '../../features/packaging/packaging_history_screen.dart';
+import '../../features/packaging/packaging_mode_select_screen.dart';
+import '../../features/packaging/packaging_bulk_report_screen.dart';
 
 GoRouter buildRouter(AuthController auth) {
   return GoRouter(
@@ -47,6 +49,14 @@ GoRouter buildRouter(AuthController auth) {
     },
     routes: [
       GoRoute(path: '/login', builder: (c, s) => const LoginScreen()),
+      GoRoute(
+        path: '/packaging/single',
+        builder: (c, s) => const PackagingSubmitScreen(),
+      ),
+      GoRoute(
+        path: '/packaging/bulk',
+        builder: (c, s) => const PackagingBulkReportScreen(),
+      ),
       ShellRoute(
         builder: (context, state, child) => HomeShell(child: child),
         routes: [
@@ -59,7 +69,7 @@ GoRouter buildRouter(AuthController auth) {
           GoRoute(path: '/stock', builder: (c, s) => const StockScreen()),
           GoRoute(
             path: '/packaging',
-            builder: (c, s) => const PackagingSubmitScreen(),
+            builder: (c, s) => const PackagingModeSelectScreen(),
           ),
           GoRoute(
             path: '/packaging/history',

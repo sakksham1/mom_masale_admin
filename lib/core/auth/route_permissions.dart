@@ -18,6 +18,8 @@ const Map<String, Set<UserRole>> routePermissions = {
     UserRole.packaging,
   },
   '/packaging': {UserRole.packaging},
+  '/packaging/single': {UserRole.packaging},
+  '/packaging/bulk': {UserRole.packaging},
   '/packaging/history': {UserRole.packaging},
   '/sales': {UserRole.salesperson},
   '/approvals': {UserRole.manager, UserRole.admin},

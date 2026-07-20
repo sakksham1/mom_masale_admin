@@ -4,6 +4,8 @@ import 'packaging_api.dart';
 import 'packaging_provider.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/constants/layout_constants.dart';
+import '../../core/utils/haptics.dart';
+import '../../shared/widgets/success_pulse.dart';
 
 class PackagingSubmitScreen extends ConsumerStatefulWidget {
   const PackagingSubmitScreen({super.key});
@@ -18,8 +20,6 @@ class _PackagingSubmitScreenState extends ConsumerState<PackagingSubmitScreen> {
   final _qtyCtrl = TextEditingController();
   bool _submitting = false;
   String? _error;
-  String? _success;
-
   Future<void> _submit() async {
     final product = _selectedProduct;
     final size = _selectedSize;
@@ -37,19 +37,27 @@ class _PackagingSubmitScreenState extends ConsumerState<PackagingSubmitScreen> {
     setState(() {
       _submitting = true;
       _error = null;
-      _success = null;
     });
     try {
       await ref
           .read(packagingApiProvider)
           .submitReport(productId: product.id, size: size, qty: qty);
-      setState(() {
-        _success = 'Reported ${product.name} ($size) × $qty — pending approval';
-        _qtyCtrl.clear();
-        _selectedSize = null;
-      });
+      Haptics.success();
+      if (mounted) {
+        await SuccessPulse.show(
+          context,
+          '${product.name} ($size) × $qty reported',
+        );
+      }
+      if (mounted) {
+        setState(() {
+          _qtyCtrl.clear();
+          _selectedSize = null;
+        });
+      }
       ref.invalidate(myPackagingReportsProvider);
     } on ApiException catch (e) {
+      Haptics.warning();
       setState(() => _error = e.message);
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -123,10 +131,6 @@ class _PackagingSubmitScreenState extends ConsumerState<PackagingSubmitScreen> {
                   _error!,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
-              ],
-              if (_success != null) ...[
-                const SizedBox(height: 12),
-                Text(_success!, style: const TextStyle(color: Colors.green)),
               ],
               const SizedBox(height: 22),
               FilledButton(
