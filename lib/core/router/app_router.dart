@@ -15,6 +15,7 @@ import '../../features/packaging/packaging_submit_screen.dart';
 import '../../features/packaging/packaging_history_screen.dart';
 import '../../features/packaging/packaging_mode_select_screen.dart';
 import '../../features/packaging/packaging_bulk_report_screen.dart';
+import '../../features/db_explorer/db_explorer_screen.dart';
 
 GoRouter buildRouter(AuthController auth) {
   return GoRouter(
@@ -79,6 +80,10 @@ GoRouter buildRouter(AuthController auth) {
           GoRoute(
             path: '/approvals',
             builder: (c, s) => const ApprovalsScreen(),
+          ),
+          GoRoute(
+            path: '/db-explorer',
+            builder: (c, s) => const DbExplorerScreen(),
           ),
         ],
       ),

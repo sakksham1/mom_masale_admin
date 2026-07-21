@@ -23,6 +23,7 @@ const Map<String, Set<UserRole>> routePermissions = {
   '/packaging/history': {UserRole.packaging},
   '/sales': {UserRole.salesperson},
   '/approvals': {UserRole.manager, UserRole.admin},
+  '/db-explorer': {UserRole.admin},
 };
 
 bool canAccessRoute(String path, UserRole role) {

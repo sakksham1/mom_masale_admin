@@ -164,6 +164,8 @@ String _routeLabel(String path) {
       return 'Sales';
     case '/approvals':
       return 'Approvals';
+    case '/db-explorer':
+      return 'DB Explorer';
     default:
       return path;
   }
