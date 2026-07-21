@@ -57,12 +57,7 @@ class Product {
   );
 }
 
-const productStockAdjustReasons = [
-  'restock',
-  'adjustment',
-  'damaged',
-  'correction',
-];
+const productStockAdjustReasons = ['restock', 'damaged', 'correction'];
 
 class ProductsApi {
   final ApiClient client;

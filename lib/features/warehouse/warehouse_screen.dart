@@ -270,38 +270,6 @@ class _MaterialCard extends ConsumerStatefulWidget {
 class _MaterialCardState extends ConsumerState<_MaterialCard> {
   bool _busy = false;
 
-  Future<void> _quickAdjust(num delta, String reason) async {
-    setState(() => _busy = true);
-    try {
-      await ref
-          .read(rawMaterialsApiProvider)
-          .submitAdjustment(
-            rawMaterialId: widget.material.id,
-            delta: delta,
-            reason: reason,
-          );
-      Haptics.tap();
-      widget.onAdjustSubmitted();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Adjustment submitted — pending approval'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    } on ApiException catch (e) {
-      Haptics.warning();
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
   Future<void> _openCustomSheet() async {
     final result = await showModalBottomSheet<_AdjustInput>(
       context: context,
@@ -430,15 +398,9 @@ class _MaterialCardState extends ConsumerState<_MaterialCard> {
                 const SizedBox(width: 4),
                 IconButton(
                   visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.remove_circle_outline, size: 20),
-                  tooltip: 'Quick consume 1',
-                  onPressed: () => _quickAdjust(-1, 'consumption'),
-                ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.add_circle_outline, size: 20),
-                  tooltip: 'Quick restock 1',
-                  onPressed: () => _quickAdjust(1, 'restock'),
+                  icon: const Icon(Icons.edit_outlined, size: 20),
+                  tooltip: 'Adjust stock',
+                  onPressed: _openCustomSheet,
                 ),
               ],
             ],

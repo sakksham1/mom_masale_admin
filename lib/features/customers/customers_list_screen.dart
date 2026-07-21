@@ -56,7 +56,7 @@ class CustomersTab extends ConsumerWidget {
               bottom: LayoutConstants.navBarClearance,
             ),
             itemCount: customers.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
+            separatorBuilder: (_, _) => const Divider(height: 1),
             itemBuilder: (context, i) => _CustomerTile(customer: customers[i]),
           );
         },

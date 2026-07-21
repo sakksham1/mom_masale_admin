@@ -57,6 +57,7 @@ dev_dependencies:
   build_runner: ^2.15.1
   freezed: ^4.0.0-dev.3
   json_serializable: ^6.14.0
+  flutter_launcher_icons: ^0.14.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -64,6 +65,10 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/images/brand_logo_full.png
+
 
   fonts:
     - family: Fraunces
@@ -81,3 +86,11 @@ flutter:
         - asset: assets/fonts/IBMPlexMono-Regular.ttf
         - asset: assets/fonts/IBMPlexMono-SemiBold.ttf
           weight: 600
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/icon.png"
+  adaptive_icon_background: "#F7EFE1"
+  adaptive_icon_foreground: "assets/icon/icon_foreground.png"
+  min_sdk_android: 21

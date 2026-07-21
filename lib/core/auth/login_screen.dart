@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/api_client_provider.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_colors.dart';
-import '../../shared/widgets/brand_logo.dart';
 import 'user_role.dart';
 import 'package:go_router/go_router.dart';
 
@@ -50,10 +49,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final denied =
         GoRouterState.of(context).uri.queryParameters['denied'] == '1';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? AppColors.charcoal : AppColors.parchment;
+    final onCardColor = isDark ? AppColors.parchment : AppColors.cumin;
+    final fieldFillColor = isDark
+        ? Colors.white.withValues(alpha: 0.06)
+        : AppColors.cumin.withValues(alpha: 0.04);
 
     return Scaffold(
       body: Container(
@@ -73,7 +77,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const BrandLogo(size: 92),
+                    Image.asset(
+                      'assets/images/brand_logo_full.png',
+                      height: 150,
+                    ),
                     const SizedBox(height: 20),
                     Text(
                       'Mom Masale',
@@ -93,7 +100,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Container(
                       padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
                       decoration: BoxDecoration(
-                        color: AppColors.parchment,
+                        color: cardColor,
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
@@ -109,14 +116,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           Text(
                             'Welcome back',
                             style: textTheme.titleLarge?.copyWith(
-                              color: AppColors.cumin,
+                              color: onCardColor,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Sign in to manage orders and customers.',
                             style: textTheme.bodyMedium?.copyWith(
-                              color: AppColors.cumin.withValues(alpha: 0.65),
+                              color: onCardColor.withValues(alpha: 0.65),
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -146,26 +153,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           TextField(
                             controller: _emailCtrl,
                             keyboardType: TextInputType.emailAddress,
-                            style: TextStyle(color: AppColors.cumin),
-                            decoration: const InputDecoration(
+                            style: TextStyle(color: onCardColor),
+                            decoration: InputDecoration(
                               labelText: 'Email',
-                              prefixIcon: Icon(Icons.mail_outline),
+                              filled: true,
+                              fillColor: fieldFillColor,
+                              labelStyle: TextStyle(
+                                color: onCardColor.withValues(alpha: 0.6),
+                              ),
+                              prefixIcon: Icon(
+                                Icons.mail_outline,
+                                color: onCardColor.withValues(alpha: 0.6),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 14),
                           TextField(
                             controller: _passwordCtrl,
                             obscureText: _obscure,
-                            style: TextStyle(color: AppColors.cumin),
+                            style: TextStyle(color: onCardColor),
                             onSubmitted: (_) => _loading ? null : _login(),
                             decoration: InputDecoration(
                               labelText: 'Password',
-                              prefixIcon: const Icon(Icons.lock_outline),
+                              filled: true,
+                              fillColor: fieldFillColor,
+                              labelStyle: TextStyle(
+                                color: onCardColor.withValues(alpha: 0.6),
+                              ),
+                              prefixIcon: Icon(
+                                Icons.lock_outline,
+                                color: onCardColor.withValues(alpha: 0.6),
+                              ),
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscure
                                       ? Icons.visibility_outlined
                                       : Icons.visibility_off_outlined,
+                                  color: onCardColor.withValues(alpha: 0.6),
                                 ),
                                 onPressed: () =>
                                     setState(() => _obscure = !_obscure),
