@@ -158,6 +158,7 @@ class _WarehouseTabState extends ConsumerState<WarehouseTab> {
     final result = await showModalBottomSheet<_NewMaterialInput>(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const _AddMaterialSheet(),
     );
@@ -305,6 +306,7 @@ class _MaterialCardState extends ConsumerState<_MaterialCard> {
     final result = await showModalBottomSheet<_AdjustInput>(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _AdjustMaterialSheet(material: widget.material),
     );
@@ -595,6 +597,37 @@ class _AdjustMaterialSheet extends StatefulWidget {
   State<_AdjustMaterialSheet> createState() => _AdjustMaterialSheetState();
 }
 
+/// Small locked/disabled-looking icon slot that takes the place of a
+/// stepper button when that direction isn't valid for the selected reason.
+/// Keeps the row visually balanced instead of leaving empty space.
+class _LockedDirectionIcon extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String tooltip;
+  const _LockedDirectionIcon({
+    required this.icon,
+    required this.color,
+    required this.tooltip,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          shape: BoxShape.circle,
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Icon(icon, color: color.withValues(alpha: 0.45), size: 18),
+      ),
+    );
+  }
+}
+
 class _AdjustMaterialSheetState extends State<_AdjustMaterialSheet> {
   num _delta = 0;
   final _deltaCtrl = TextEditingController(text: '0');
@@ -608,12 +641,43 @@ class _AdjustMaterialSheetState extends State<_AdjustMaterialSheet> {
     super.dispose();
   }
 
+  bool get _isRestock => _reason == 'restock';
+  bool get _isConsumption => _reason == 'consumption';
+
+  // Restock is always +, consumption is always -, correction keeps sign.
+  num _signedFor(String reason, num magnitude) {
+    if (reason == 'restock') return magnitude.abs();
+    if (reason == 'consumption') return -magnitude.abs();
+    return magnitude;
+  }
+
   void _step(num by) {
     setState(() {
       _delta += by;
+      if (_isRestock && _delta < 0) _delta = 0;
+      if (_isConsumption && _delta > 0) _delta = 0;
       _deltaCtrl.text = _delta.toString();
     });
     Haptics.tap();
+  }
+
+  void _onReasonSelected(String reason) {
+    setState(() {
+      _reason = reason;
+      _delta = _signedFor(reason, _delta.abs());
+      _deltaCtrl.text = _delta.toString();
+    });
+  }
+
+  void _onFieldChanged(String v) {
+    final parsed = num.tryParse(v) ?? 0;
+    setState(() => _delta = _signedFor(_reason, parsed.abs()));
+  }
+
+  String get _helperText {
+    if (_isRestock) return 'Restocking only adds to stock.';
+    if (_isConsumption) return 'Consumption only removes from stock.';
+    return 'Corrections can increase or decrease stock.';
   }
 
   @override
@@ -632,27 +696,46 @@ class _AdjustMaterialSheetState extends State<_AdjustMaterialSheet> {
           const SizedBox(height: 14),
           Row(
             children: [
-              IconButton.filledTonal(
-                onPressed: () => _step(-1),
-                icon: const Icon(Icons.remove),
-              ),
+              _isRestock
+                  ? const _LockedDirectionIcon(
+                      icon: Icons.remove_circle_outline,
+                      color: Color(0xFFC62828),
+                      tooltip: 'Not available for restock',
+                    )
+                  : IconButton.filledTonal(
+                      onPressed: () => _step(-1),
+                      icon: const Icon(Icons.remove),
+                    ),
               Expanded(
                 child: TextField(
                   controller: _deltaCtrl,
                   textAlign: TextAlign.center,
-                  keyboardType: const TextInputType.numberWithOptions(
+                  keyboardType: TextInputType.numberWithOptions(
                     decimal: true,
-                    signed: true,
+                    signed: _reason == 'correction',
                   ),
-                  onChanged: (v) => _delta = num.tryParse(v) ?? 0,
+                  onChanged: _onFieldChanged,
                   decoration: const InputDecoration(labelText: 'Change'),
                 ),
               ),
-              IconButton.filledTonal(
-                onPressed: () => _step(1),
-                icon: const Icon(Icons.add),
-              ),
+              _isConsumption
+                  ? const _LockedDirectionIcon(
+                      icon: Icons.add_circle_outline,
+                      color: Color(0xFF2E7D32),
+                      tooltip: 'Not available for consumption',
+                    )
+                  : IconButton.filledTonal(
+                      onPressed: () => _step(1),
+                      icon: const Icon(Icons.add),
+                    ),
             ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _helperText,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 14),
           Text('Reason', style: Theme.of(context).textTheme.labelLarge),
@@ -664,7 +747,7 @@ class _AdjustMaterialSheetState extends State<_AdjustMaterialSheet> {
                   (r) => ChoiceChip(
                     label: Text(r),
                     selected: _reason == r,
-                    onSelected: (_) => setState(() => _reason = r),
+                    onSelected: (_) => _onReasonSelected(r),
                   ),
                 )
                 .toList(),
