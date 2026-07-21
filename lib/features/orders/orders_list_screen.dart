@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'orders_provider.dart';
+import 'order_detail_screen.dart';
 import '../../core/constants/layout_constants.dart';
 import '../../shared/widgets/status_badge.dart';
 
@@ -33,6 +34,16 @@ class OrdersTab extends ConsumerWidget {
                 title: Text('#${o.id} — ${o.customerName}'),
                 subtitle: Text('${o.status} · ${o.paymentStatus}'),
                 trailing: Text('₹${o.total}'),
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => OrderDetailScreen(order: o),
+                    ),
+                  );
+                  // The detail screen may have changed status/payment —
+                  // refresh so the list reflects it once we're back.
+                  ref.invalidate(ordersProvider);
+                },
               );
             },
           );
