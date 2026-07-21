@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/auth/route_permissions.dart';
 import '../../core/constants/layout_constants.dart';
+import '../../core/theme/theme_mode_provider.dart';
 
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
@@ -75,6 +76,45 @@ class AccountScreen extends ConsumerWidget {
                     icon: Icons.call_outlined,
                     label: 'Phone',
                     value: user?.phone ?? 'Not set',
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Appearance',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  SegmentedButton<ThemeMode>(
+                    segments: const [
+                      ButtonSegment(
+                        value: ThemeMode.system,
+                        label: Text('System'),
+                        icon: Icon(Icons.brightness_auto_outlined),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.light,
+                        label: Text('Light'),
+                        icon: Icon(Icons.light_mode_outlined),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.dark,
+                        label: Text('Dark'),
+                        icon: Icon(Icons.dark_mode_outlined),
+                      ),
+                    ],
+                    selected: {ref.watch(themeModeProvider)},
+                    onSelectionChanged: (selection) =>
+                        ref.read(themeModeProvider.notifier).state =
+                            selection.first,
                   ),
                 ],
               ),
