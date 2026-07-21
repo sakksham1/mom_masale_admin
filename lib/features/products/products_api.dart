@@ -5,7 +5,11 @@ class ProductSize {
   final int price;
   final int stockQty;
 
-  ProductSize({required this.size, required this.price, required this.stockQty});
+  ProductSize({
+    required this.size,
+    required this.price,
+    required this.stockQty,
+  });
 
   factory ProductSize.fromJson(Map<String, dynamic> j) => ProductSize(
     size: j['size'],
@@ -21,9 +25,16 @@ class Product {
   final List<ProductSize> sizes;
 
   Product({
-    required this.id, required this.slug, required this.name, required this.category,
-    required this.image, required this.comingSoon, required this.featured,
-    required this.bestseller, required this.newArrival, required this.sizes,
+    required this.id,
+    required this.slug,
+    required this.name,
+    required this.category,
+    required this.image,
+    required this.comingSoon,
+    required this.featured,
+    required this.bestseller,
+    required this.newArrival,
+    required this.sizes,
   });
 
   int get totalStock => sizes.fold(0, (sum, s) => sum + s.stockQty);
@@ -40,9 +51,18 @@ class Product {
     featured: j['featured'] == 1 || j['featured'] == true,
     bestseller: j['bestseller'] == 1 || j['bestseller'] == true,
     newArrival: j['new_arrival'] == 1 || j['new_arrival'] == true,
-    sizes: (j['sizes'] as List? ?? []).map((s) => ProductSize.fromJson(s)).toList(),
+    sizes: (j['sizes'] as List? ?? [])
+        .map((s) => ProductSize.fromJson(s))
+        .toList(),
   );
 }
+
+const productStockAdjustReasons = [
+  'restock',
+  'adjustment',
+  'damaged',
+  'correction',
+];
 
 class ProductsApi {
   final ApiClient client;
@@ -50,25 +70,27 @@ class ProductsApi {
 
   Future<List<Product>> fetchProducts() async {
     final res = await client.get('/api/admin/products');
-    return (res.data['products'] as List).map((p) => Product.fromJson(p)).toList();
+    return (res.data['products'] as List)
+        .map((p) => Product.fromJson(p))
+        .toList();
   }
 
-  /// changeQty is a signed delta — positive to add stock, negative to remove.
-  /// Returns the new stock quantity after the adjustment.
-  Future<int> adjustStock({
+  /// warehouser-only on the backend. Doesn't change stock immediately — files
+  /// a pending product_stock_transactions row that a manager/admin approves
+  /// via /api/manager/approvals/decide. Mirrors RawMaterialsApi.submitAdjustment.
+  Future<void> submitStockAdjustment({
     required int productId,
     required String size,
     required int changeQty,
-    String reason = 'adjustment',
+    required String reason,
     String? note,
-  }) async {
-    final res = await client.post('/api/admin/inventory/adjust', {
+  }) {
+    return client.post('/api/warehouse/products/adjust', {
       'productId': productId,
       'size': size,
       'changeQty': changeQty,
       'reason': reason,
-      if (note != null) 'note': note,
+      if (note != null && note.isNotEmpty) 'note': note,
     });
-    return res.data['stockQty'] as int;
   }
 }

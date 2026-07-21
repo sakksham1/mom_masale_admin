@@ -59,6 +59,27 @@ class ApprovalsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                 ],
+                if (queue.productStock.isNotEmpty) ...[
+                  _SectionHeader('Product Stock Adjustments'),
+                  ...queue.productStock.map(
+                    (s) => _DecisionTile(
+                      title:
+                          '${s.productName} (${s.size})  ${s.changeQty > 0 ? '+' : ''}${s.changeQty}',
+                      subtitle:
+                          'Reason: ${s.reason}'
+                          '${s.note != null && s.note!.isNotEmpty ? ' · ${s.note}' : ''}'
+                          ' · by ${s.requestedByName}',
+                      onDecide: (decision) => _decide(
+                        context,
+                        ref,
+                        'product_stock',
+                        s.id,
+                        decision,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 if (queue.packaging.isNotEmpty) ...[
                   _SectionHeader('Packaging Reports'),
                   ...queue.packaging.map(

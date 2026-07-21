@@ -6,10 +6,15 @@ import 'products_provider.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/utils/currency.dart';
 import '../../core/constants/layout_constants.dart';
+import '../../core/utils/haptics.dart';
 import '../../shared/widgets/product_avatar.dart';
 
-class InventoryTab extends ConsumerWidget {
-  const InventoryTab({super.key});
+/// Products tab of the Inventory screen. View-only for packaging, manager,
+/// admin. Warehouser sees an edit button per size that opens a bottom sheet
+/// and submits a pending stock adjustment for manager/admin approval.
+class ProductsTab extends ConsumerWidget {
+  final bool canManage;
+  const ProductsTab({super.key, required this.canManage});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -27,7 +32,8 @@ class InventoryTab extends ConsumerWidget {
               bottom: LayoutConstants.navBarClearance,
             ),
             itemCount: products.length,
-            itemBuilder: (context, i) => _ProductTile(product: products[i]),
+            itemBuilder: (context, i) =>
+                _ProductTile(product: products[i], canManage: canManage),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -37,9 +43,10 @@ class InventoryTab extends ConsumerWidget {
   }
 }
 
-class _ProductTile extends ConsumerWidget {
+class _ProductTile extends StatelessWidget {
   final Product product;
-  const _ProductTile({required this.product});
+  final bool canManage;
+  const _ProductTile({required this.product, required this.canManage});
 
   Color? _stockColor(BuildContext context, int qty) {
     if (qty == 0) return Theme.of(context).colorScheme.error;
@@ -48,7 +55,7 @@ class _ProductTile extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return ExpansionTile(
       leading: ProductAvatar(image: product.image),
       title: Text(product.name),
@@ -87,6 +94,7 @@ class _ProductTile extends ConsumerWidget {
             (size) => _SizeRow(
               product: product,
               size: size,
+              canManage: canManage,
               stockColor: _stockColor(context, size.stockQty),
             ),
           )
@@ -98,10 +106,12 @@ class _ProductTile extends ConsumerWidget {
 class _SizeRow extends ConsumerStatefulWidget {
   final Product product;
   final ProductSize size;
+  final bool canManage;
   final Color? stockColor;
   const _SizeRow({
     required this.product,
     required this.size,
+    required this.canManage,
     required this.stockColor,
   });
 
@@ -112,7 +122,7 @@ class _SizeRow extends ConsumerStatefulWidget {
 class _SizeRowState extends ConsumerState<_SizeRow> {
   bool _busy = false;
 
-  Future<void> _adjust(
+  Future<void> _submit(
     int changeQty, {
     required String reason,
     String? note,
@@ -121,15 +131,21 @@ class _SizeRowState extends ConsumerState<_SizeRow> {
     try {
       await ref
           .read(productsApiProvider)
-          .adjustStock(
+          .submitStockAdjustment(
             productId: widget.product.id,
             size: widget.size.size,
             changeQty: changeQty,
             reason: reason,
             note: note,
           );
-      ref.invalidate(productsProvider);
+      Haptics.tap();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Submitted — pending approval')),
+        );
+      }
     } on ApiException catch (e) {
+      Haptics.warning();
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -140,43 +156,17 @@ class _SizeRowState extends ConsumerState<_SizeRow> {
     }
   }
 
-  Future<void> _openSetStockDialog() async {
-    final controller = TextEditingController(
-      text: widget.size.stockQty.toString(),
-    );
-    final result = await showDialog<int>(
+  Future<void> _openAdjustSheet() async {
+    final result = await showModalBottomSheet<_AdjustInput>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Set stock — ${widget.product.name} (${widget.size.size})'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: 'New stock quantity'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final value = int.tryParse(controller.text.trim());
-              if (value != null && value >= 0) Navigator.pop(context, value);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+      isScrollControlled: true,
+      useRootNavigator: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) =>
+          _AdjustStockSheet(product: widget.product, size: widget.size),
     );
-    if (result != null && result != widget.size.stockQty) {
-      final delta = result - widget.size.stockQty;
-      await _adjust(
-        delta,
-        reason: 'correction',
-        note: 'manually set to $result via admin app',
-      );
-    }
+    if (result == null) return;
+    await _submit(result.delta, reason: result.reason, note: result.note);
   }
 
   @override
@@ -194,44 +184,163 @@ class _SizeRowState extends ConsumerState<_SizeRow> {
           : Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                IconButton(
-                  icon: const Icon(Icons.remove_circle_outline),
-                  tooltip: 'Decrease by 1',
-                  onPressed: widget.size.stockQty > 0
-                      ? () => _adjust(
-                          -1,
-                          reason: 'adjustment',
-                          note: 'quick decrement via admin app',
-                        )
-                      : null,
-                ),
-                SizedBox(
-                  width: 36,
-                  child: Text(
-                    '${widget.size.stockQty}',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: widget.stockColor,
-                    ),
+                Text(
+                  '${widget.size.stockQty}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: widget.stockColor,
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.add_circle_outline),
-                  tooltip: 'Increase by 1',
-                  onPressed: () => _adjust(
-                    1,
-                    reason: 'restock',
-                    note: 'quick increment via admin app',
+                if (widget.canManage) ...[
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    tooltip: 'Adjust stock',
+                    onPressed: _openAdjustSheet,
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined),
-                  tooltip: 'Set exact quantity',
-                  onPressed: _openSetStockDialog,
-                ),
+                ],
               ],
             ),
+    );
+  }
+}
+
+class _AdjustInput {
+  final int delta;
+  final String reason;
+  final String? note;
+  _AdjustInput(this.delta, this.reason, this.note);
+}
+
+class _AdjustStockSheet extends StatefulWidget {
+  final Product product;
+  final ProductSize size;
+  const _AdjustStockSheet({required this.product, required this.size});
+
+  @override
+  State<_AdjustStockSheet> createState() => _AdjustStockSheetState();
+}
+
+class _AdjustStockSheetState extends State<_AdjustStockSheet> {
+  int _delta = 0;
+  final _deltaCtrl = TextEditingController(text: '0');
+  final _noteCtrl = TextEditingController();
+  String _reason = productStockAdjustReasons.first;
+
+  @override
+  void dispose() {
+    _deltaCtrl.dispose();
+    _noteCtrl.dispose();
+    super.dispose();
+  }
+
+  void _step(int by) {
+    setState(() {
+      _delta += by;
+      _deltaCtrl.text = _delta.toString();
+    });
+    Haptics.tap();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final projected = widget.size.stockQty + _delta;
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHigh,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: scheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              Text(
+                'Adjust — ${widget.product.name} (${widget.size.size})',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Current: ${widget.size.stockQty}  →  New: $projected',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  IconButton.filledTonal(
+                    onPressed: () => _step(-1),
+                    icon: const Icon(Icons.remove),
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _deltaCtrl,
+                      textAlign: TextAlign.center,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        signed: true,
+                      ),
+                      onChanged: (v) =>
+                          setState(() => _delta = int.tryParse(v) ?? 0),
+                      decoration: const InputDecoration(labelText: 'Change'),
+                    ),
+                  ),
+                  IconButton.filledTonal(
+                    onPressed: () => _step(1),
+                    icon: const Icon(Icons.add),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text('Reason', style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: productStockAdjustReasons
+                    .map(
+                      (r) => ChoiceChip(
+                        label: Text(r),
+                        selected: _reason == r,
+                        onSelected: (_) => setState(() => _reason = r),
+                      ),
+                    )
+                    .toList(),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _noteCtrl,
+                decoration: const InputDecoration(labelText: 'Note (optional)'),
+              ),
+              const SizedBox(height: 22),
+              FilledButton(
+                onPressed: _delta == 0
+                    ? null
+                    : () => Navigator.pop(
+                        context,
+                        _AdjustInput(_delta, _reason, _noteCtrl.text.trim()),
+                      ),
+                child: const Text('Submit for Approval'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

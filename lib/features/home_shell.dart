@@ -27,7 +27,12 @@ const _allNavItems = [
     Icons.storefront,
     'Business',
   ),
-  _NavItem('/stock', Icons.inventory_2_outlined, Icons.inventory_2, 'Stock'),
+  _NavItem(
+    '/stock',
+    Icons.inventory_2_outlined,
+    Icons.inventory_2,
+    'Inventory',
+  ),
   _NavItem(
     '/approvals',
     Icons.fact_check_outlined,

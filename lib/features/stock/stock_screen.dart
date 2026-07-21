@@ -6,11 +6,10 @@ import '../../core/network/api_client_provider.dart';
 import '../products/products_list_screen.dart';
 import '../warehouse/warehouse_screen.dart';
 
-/// Combines Inventory (finished-product stock) and Warehouse (raw-material
-/// stock) under one "Stock" nav entry. Which sub-tabs show up depends on
-/// the signed-in role — admins see both, everyone else with stock access
-/// (manager, warehouser, packaging) just sees Warehouse, so the tab bar is
-/// skipped entirely for them.
+/// Inventory screen — two tabs: Products (finished goods) and Raw Materials.
+/// Visible (view-only) to packaging, manager, and admin — who approve
+/// pending changes via the Approvals tab. Editable only by warehouser, who
+/// submits changes on either tab for manager/admin approval.
 class StockScreen extends ConsumerStatefulWidget {
   const StockScreen({super.key});
 
@@ -20,58 +19,37 @@ class StockScreen extends ConsumerStatefulWidget {
 
 class _StockScreenState extends ConsumerState<StockScreen>
     with SingleTickerProviderStateMixin {
-  TabController? _controller;
-  List<_StockSection> _sections = const [];
-
-  void _syncSections(UserRole role) {
-    final sections = <_StockSection>[
-      if (role == UserRole.admin)
-        const _StockSection('Inventory', InventoryTab()),
-      const _StockSection('Warehouse', WarehouseTab()),
-    ];
-    if (_sections.length != sections.length) {
-      _controller?.dispose();
-      _controller = TabController(length: sections.length, vsync: this);
-    }
-    _sections = sections;
-  }
+  late final TabController _controller = TabController(length: 2, vsync: this);
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final role = ref.watch(authControllerProvider).role;
-    _syncSections(role);
-
-    if (_sections.length == 1) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Stock')),
-        body: _sections.first.body,
-      );
-    }
+    final canManage = role == UserRole.warehouser;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Stock'),
+        title: const Text('Inventory'),
         bottom: TabBar(
           controller: _controller,
-          tabs: _sections.map((s) => Tab(text: s.label)).toList(),
+          tabs: const [
+            Tab(text: 'Products'),
+            Tab(text: 'Raw Materials'),
+          ],
         ),
       ),
       body: TabBarView(
         controller: _controller,
-        children: _sections.map((s) => s.body).toList(),
+        children: [
+          ProductsTab(canManage: canManage),
+          const WarehouseTab(),
+        ],
       ),
     );
   }
-}
-
-class _StockSection {
-  final String label;
-  final Widget body;
-  const _StockSection(this.label, this.body);
 }

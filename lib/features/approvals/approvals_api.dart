@@ -84,18 +84,60 @@ class PendingProductCore {
   }
 }
 
+/// New: finished-product stock adjustments filed by a warehouser, awaiting
+/// manager/admin decision. Mirrors PendingRawMaterial.
+class PendingProductStock {
+  final int id, changeQty;
+  final String productSlug,
+      productName,
+      size,
+      reason,
+      requestedByName,
+      createdAt;
+  final String? note;
+  PendingProductStock({
+    required this.id,
+    required this.productSlug,
+    required this.productName,
+    required this.size,
+    required this.changeQty,
+    required this.reason,
+    this.note,
+    required this.requestedByName,
+    required this.createdAt,
+  });
+
+  factory PendingProductStock.fromJson(Map<String, dynamic> j) =>
+      PendingProductStock(
+        id: j['id'],
+        productSlug: j['product_slug'],
+        productName: j['product_name'],
+        size: j['size'],
+        changeQty: j['change_qty'],
+        reason: j['reason'],
+        note: j['note'],
+        requestedByName: j['requested_by_name'],
+        createdAt: j['created_at'] ?? '',
+      );
+}
+
 class ApprovalsQueue {
   final List<PendingRawMaterial> rawMaterial;
   final List<PendingPackaging> packaging;
   final List<PendingProductCore> productCore;
+  final List<PendingProductStock> productStock;
   ApprovalsQueue({
     required this.rawMaterial,
     required this.packaging,
     required this.productCore,
+    required this.productStock,
   });
 
   bool get isEmpty =>
-      rawMaterial.isEmpty && packaging.isEmpty && productCore.isEmpty;
+      rawMaterial.isEmpty &&
+      packaging.isEmpty &&
+      productCore.isEmpty &&
+      productStock.isEmpty;
 
   factory ApprovalsQueue.fromJson(Map<String, dynamic> j) => ApprovalsQueue(
     rawMaterial: (j['rawMaterial'] as List? ?? [])
@@ -106,6 +148,9 @@ class ApprovalsQueue {
         .toList(),
     productCore: (j['productCore'] as List? ?? [])
         .map((r) => PendingProductCore.fromJson(r))
+        .toList(),
+    productStock: (j['productStock'] as List? ?? [])
+        .map((r) => PendingProductStock.fromJson(r))
         .toList(),
   );
 }
@@ -119,7 +164,7 @@ class ApprovalsApi {
     return ApprovalsQueue.fromJson(res.data);
   }
 
-  /// type: 'raw_material' | 'packaging' | 'product_core'
+  /// type: 'raw_material' | 'packaging' | 'product_core' | 'product_stock'
   /// decision: 'approved' | 'rejected'
   Future<void> decide({
     required String type,
