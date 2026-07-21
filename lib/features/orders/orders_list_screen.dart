@@ -7,7 +7,8 @@ import '../../core/constants/layout_constants.dart';
 import '../../shared/widgets/status_badge.dart';
 
 class OrdersTab extends ConsumerWidget {
-  const OrdersTab({super.key});
+  final bool editable;
+  const OrdersTab({super.key, this.editable = true});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -37,12 +38,15 @@ class OrdersTab extends ConsumerWidget {
                 onTap: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => OrderDetailScreen(order: o),
+                      builder: (_) =>
+                          OrderDetailScreen(order: o, editable: editable),
                     ),
                   );
-                  // The detail screen may have changed status/payment —
-                  // refresh so the list reflects it once we're back.
-                  ref.invalidate(ordersProvider);
+                  if (editable) {
+                    // Only admin's detail screen can change anything —
+                    // no need to refetch after a purely read-only visit.
+                    ref.invalidate(ordersProvider);
+                  }
                 },
               );
             },

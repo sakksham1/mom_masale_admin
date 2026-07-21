@@ -11,18 +11,20 @@ const _paymentStatuses = ['created', 'paid', 'failed', 'cod'];
 
 String _statusLabel(String s) => s[0].toUpperCase() + s.substring(1);
 
-/// Next non-cancelled status after [current], or null if there isn't one
-/// (already delivered/cancelled).
 String? _nextStatus(String current) {
   final idx = _statusFlow.indexOf(current);
-  if (idx == -1 || idx >= _statusFlow.length - 2)
-    return null; // last real step is 'delivered'
+  if (idx == -1 || idx >= _statusFlow.length - 2) return null;
   return _statusFlow[idx + 1];
 }
 
 class OrderDetailScreen extends ConsumerStatefulWidget {
   final Order order;
-  const OrderDetailScreen({super.key, required this.order});
+  final bool editable;
+  const OrderDetailScreen({
+    super.key,
+    required this.order,
+    this.editable = true,
+  });
 
   @override
   ConsumerState<OrderDetailScreen> createState() => _OrderDetailScreenState();
@@ -68,7 +70,6 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         _status = status;
         _paymentStatus = paymentStatus;
       });
-      // Refresh whichever filtered lists are cached so OrdersTab shows the change.
       ref.invalidate(ordersProvider);
       if (mounted) {
         ScaffoldMessenger.of(
@@ -143,102 +144,121 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      OrderStatusBadge(
-                        status: _order.status,
-                        paymentStatus: _order.paymentStatus,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _status,
-                          decoration: const InputDecoration(
-                            labelText: 'Fulfilment status',
-                          ),
-                          items: _statusFlow
-                              .map(
-                                (s) => DropdownMenuItem(
-                                  value: s,
-                                  child: Text(_statusLabel(s)),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: _saving
-                              ? null
-                              : (v) => setState(() => _status = v!),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: _paymentStatus,
-                    decoration: const InputDecoration(
-                      labelText: 'Payment status',
-                    ),
-                    items: _paymentStatuses
-                        .map(
-                          (s) => DropdownMenuItem(
-                            value: s,
-                            child: Text(_statusLabel(s)),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: _saving
-                        ? null
-                        : (v) => setState(() => _paymentStatus = v!),
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: (_saving || !_dirty)
-                        ? null
-                        : () => _persist(
-                            status: _status,
-                            paymentStatus: _paymentStatus,
-                          ),
-                    child: _saving
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Save Changes'),
-                  ),
-                  if (next != null || canCancel) ...[
-                    const SizedBox(height: 12),
-                    const Divider(),
-                    const SizedBox(height: 8),
+                  if (!widget.editable) ...[
+                    // Read-only summary for roles without write access (e.g. manager).
                     Row(
                       children: [
-                        if (next != null)
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: _saving ? null : _advance,
-                              icon: const Icon(Icons.arrow_forward),
-                              label: Text('Mark ${_statusLabel(next)}'),
-                            ),
+                        OrderStatusBadge(
+                          status: _order.status,
+                          paymentStatus: _order.paymentStatus,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            '${_statusLabel(_order.status)} · ${_statusLabel(_order.paymentStatus)}',
+                            style: Theme.of(context).textTheme.bodyLarge,
                           ),
-                        if (next != null && canCancel)
-                          const SizedBox(width: 12),
-                        if (canCancel)
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Theme.of(
-                                  context,
-                                ).colorScheme.error,
-                                side: BorderSide(
-                                  color: Theme.of(context).colorScheme.error,
-                                ),
-                              ),
-                              onPressed: _saving ? null : _cancel,
-                              icon: const Icon(Icons.cancel_outlined),
-                              label: const Text('Cancel'),
-                            ),
-                          ),
+                        ),
                       ],
                     ),
+                  ] else ...[
+                    Row(
+                      children: [
+                        OrderStatusBadge(
+                          status: _order.status,
+                          paymentStatus: _order.paymentStatus,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _status,
+                            decoration: const InputDecoration(
+                              labelText: 'Fulfilment status',
+                            ),
+                            items: _statusFlow
+                                .map(
+                                  (s) => DropdownMenuItem(
+                                    value: s,
+                                    child: Text(_statusLabel(s)),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: _saving
+                                ? null
+                                : (v) => setState(() => _status = v!),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: _paymentStatus,
+                      decoration: const InputDecoration(
+                        labelText: 'Payment status',
+                      ),
+                      items: _paymentStatuses
+                          .map(
+                            (s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(_statusLabel(s)),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: _saving
+                          ? null
+                          : (v) => setState(() => _paymentStatus = v!),
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: (_saving || !_dirty)
+                          ? null
+                          : () => _persist(
+                              status: _status,
+                              paymentStatus: _paymentStatus,
+                            ),
+                      child: _saving
+                          ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Save Changes'),
+                    ),
+                    if (next != null || canCancel) ...[
+                      const SizedBox(height: 12),
+                      const Divider(),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          if (next != null)
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _saving ? null : _advance,
+                                icon: const Icon(Icons.arrow_forward),
+                                label: Text('Mark ${_statusLabel(next)}'),
+                              ),
+                            ),
+                          if (next != null && canCancel)
+                            const SizedBox(width: 12),
+                          if (canCancel)
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.error,
+                                  side: BorderSide(
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                                ),
+                                onPressed: _saving ? null : _cancel,
+                                icon: const Icon(Icons.cancel_outlined),
+                                label: const Text('Cancel'),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                   ],
                 ],
               ),

@@ -38,7 +38,23 @@ String _roleLabel(UserRole role) {
 }
 
 class CustomersTab extends ConsumerWidget {
-  const CustomersTab({super.key});
+  /// Whether the role-change menu is shown. The backend (roles.js) is
+  /// admin-only regardless, so this is a UI convenience, not the real gate.
+  final bool editable;
+
+  /// If set, only users whose role is in this set are shown. Lets one
+  /// provider/endpoint (which returns every user) power both a
+  /// "Customers" view and a "Staff" view.
+  final Set<UserRole>? roleFilter;
+
+  final String emptyMessage;
+
+  const CustomersTab({
+    super.key,
+    this.editable = true,
+    this.roleFilter,
+    this.emptyMessage = 'No registered customers yet.',
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -48,20 +64,32 @@ class CustomersTab extends ConsumerWidget {
       onRefresh: () async => ref.invalidate(customersProvider),
       child: customersAsync.when(
         data: (customers) {
-          if (customers.isEmpty) {
-            return const Center(child: Text('No registered customers yet.'));
+          final filtered = roleFilter == null
+              ? customers
+              : customers.where((c) => roleFilter!.contains(c.role)).toList();
+
+          if (filtered.isEmpty) {
+            return ListView(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 48),
+                  child: Center(child: Text(emptyMessage)),
+                ),
+              ],
+            );
           }
           return ListView.separated(
             padding: const EdgeInsets.only(
               bottom: LayoutConstants.navBarClearance,
             ),
-            itemCount: customers.length,
+            itemCount: filtered.length,
             separatorBuilder: (_, _) => const Divider(height: 1),
-            itemBuilder: (context, i) => _CustomerTile(customer: customers[i]),
+            itemBuilder: (context, i) =>
+                _CustomerTile(customer: filtered[i], editable: editable),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Could not load customers: $e')),
+        error: (e, _) => Center(child: Text('Could not load: $e')),
       ),
     );
   }
@@ -69,7 +97,8 @@ class CustomersTab extends ConsumerWidget {
 
 class _CustomerTile extends ConsumerStatefulWidget {
   final Customer customer;
-  const _CustomerTile({required this.customer});
+  final bool editable;
+  const _CustomerTile({required this.customer, required this.editable});
 
   @override
   ConsumerState<_CustomerTile> createState() => _CustomerTileState();
@@ -161,19 +190,20 @@ class _CustomerTileState extends ConsumerState<_CustomerTile> {
                     ),
                   ],
                 ),
-                PopupMenuButton<UserRole>(
-                  icon: const Icon(Icons.more_vert),
-                  onSelected: _changeRole,
-                  itemBuilder: (context) => _assignableRoles
-                      .where((r) => r != c.role)
-                      .map(
-                        (r) => PopupMenuItem(
-                          value: r,
-                          child: Text('Set as ${_roleLabel(r)}'),
-                        ),
-                      )
-                      .toList(),
-                ),
+                if (widget.editable)
+                  PopupMenuButton<UserRole>(
+                    icon: const Icon(Icons.more_vert),
+                    onSelected: _changeRole,
+                    itemBuilder: (context) => _assignableRoles
+                        .where((r) => r != c.role)
+                        .map(
+                          (r) => PopupMenuItem(
+                            value: r,
+                            child: Text('Set as ${_roleLabel(r)}'),
+                          ),
+                        )
+                        .toList(),
+                  ),
               ],
             ),
     );
