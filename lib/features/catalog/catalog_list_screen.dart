@@ -143,7 +143,7 @@ class _CatalogTile extends StatelessWidget {
 
     return TapScale(
       scaleDown: 0.985,
-      onTap: () => Navigator.of(context).push(
+      onTap: () => Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(builder: (_) => ProductEditScreen(product: product)),
       ),
       child: Container(
