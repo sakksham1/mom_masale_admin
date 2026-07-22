@@ -8,6 +8,7 @@ import '../core/auth/route_permissions.dart';
 import '../core/network/api_client_provider.dart';
 import '../core/constants/layout_constants.dart';
 import '../features/approvals/approvals_provider.dart';
+import '../shared/widgets/app_banner.dart';
 
 class _NavItem {
   final String path;
@@ -33,12 +34,7 @@ const _allNavItems = [
     Icons.inventory_2,
     'Inventory',
   ),
-  _NavItem(
-    '/catalog',
-    Icons.category_outlined,
-    Icons.category,
-    'Catalog',
-  ),
+  _NavItem('/catalog', Icons.category_outlined, Icons.category, 'Catalog'),
   _NavItem(
     '/approvals',
     Icons.fact_check_outlined,
@@ -91,6 +87,7 @@ class HomeShell extends ConsumerWidget {
         : false;
 
     return Scaffold(
+      appBar: const AppBanner(),
       body: Stack(
         children: [
           Positioned.fill(child: child),

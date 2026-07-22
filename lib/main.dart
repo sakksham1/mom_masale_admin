@@ -63,7 +63,7 @@ class _MyAppState extends ConsumerState<MyApp> {
         }
 
         return MaterialApp.router(
-          title: 'Mom Masale Admin',
+          title: 'Mom Masale ERP',
           theme: lightTheme,
           darkTheme: darkTheme,
           themeMode: themeMode,

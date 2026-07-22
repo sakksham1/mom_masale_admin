@@ -90,7 +90,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Admin',
+                      'ERP',
                       style: textTheme.bodyMedium?.copyWith(
                         color: AppColors.parchment.withValues(alpha: 0.7),
                         letterSpacing: 3,
@@ -114,14 +114,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
-                            'Welcome back',
+                            'Hello!',
                             style: textTheme.titleLarge?.copyWith(
                               color: onCardColor,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Sign in to manage orders and customers.',
+                            'Sign in to access your account.',
                             style: textTheme.bodyMedium?.copyWith(
                               color: onCardColor.withValues(alpha: 0.65),
                             ),

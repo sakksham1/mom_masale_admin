@@ -1,6 +1,6 @@
 {
-    "name": "mom_masale_admin",
-    "short_name": "mom_masale_admin",
+    "name": "Mom Masale ERP",
+    "short_name": "Mom Masale ERP",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
