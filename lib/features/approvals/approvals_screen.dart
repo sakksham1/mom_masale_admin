@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'approvals_provider.dart';
+import '../../core/auth/user_role.dart';
+import '../../core/network/api_client_provider.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/constants/layout_constants.dart';
 
@@ -10,6 +12,11 @@ class ApprovalsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final queueAsync = ref.watch(approvalsQueueProvider);
+    final role = ref.watch(authControllerProvider).role;
+    // Catalog changes go straight to the live site, so only an admin can
+    // approve/reject them here — the backend enforces this too, this just
+    // avoids showing a manager buttons that would 403.
+    final canApproveCatalog = role == UserRole.admin;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Approvals')),
@@ -43,6 +50,20 @@ class ApprovalsScreen extends ConsumerWidget {
                 LayoutConstants.navBarClearance,
               ),
               children: [
+                if (queue.productCore.isNotEmpty) ...[
+                  _SectionHeader('Product Catalog Changes'),
+                  ...queue.productCore.map(
+                    (c) => _DecisionTile(
+                      title: c.productSlug ?? 'product',
+                      subtitle: '${c.summary} · by ${c.requestedByName}',
+                      canDecide: canApproveCatalog,
+                      lockedReason: 'Awaiting admin approval',
+                      onDecide: (decision) =>
+                          _decide(context, ref, 'product_core', c.id, decision),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 if (queue.rawMaterial.isNotEmpty) ...[
                   _SectionHeader('Raw Material Adjustments'),
                   ...queue.rawMaterial.map(
@@ -89,21 +110,6 @@ class ApprovalsScreen extends ConsumerWidget {
                           'Reported by ${p.requestedByName} on ${p.reportDate}',
                       onDecide: (decision) =>
                           _decide(context, ref, 'packaging', p.id, decision),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                if (queue.productCore.isNotEmpty) ...[
-                  _SectionHeader('Product Changes'),
-                  ...queue.productCore.map(
-                    (c) => _DecisionTile(
-                      title: c.field == 'name'
-                          ? 'Rename → ${c.payload['name']}'
-                          : 'Price change — ${c.payload['size']}: ₹${c.payload['price']}',
-                      subtitle:
-                          '${c.productSlug ?? 'product'} · by ${c.requestedByName}',
-                      onDecide: (decision) =>
-                          _decide(context, ref, 'product_core', c.id, decision),
                     ),
                   ),
                 ],
@@ -162,10 +168,14 @@ class _SectionHeader extends StatelessWidget {
 class _DecisionTile extends StatefulWidget {
   final String title, subtitle;
   final Future<void> Function(String decision) onDecide;
+  final bool canDecide;
+  final String? lockedReason;
   const _DecisionTile({
     required this.title,
     required this.subtitle,
     required this.onDecide,
+    this.canDecide = true,
+    this.lockedReason,
   });
 
   @override
@@ -187,33 +197,42 @@ class _DecisionTileState extends State<_DecisionTile> {
       child: ListTile(
         title: Text(widget.title),
         subtitle: Text(widget.subtitle),
-        trailing: _busy
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+        trailing: !widget.canDecide
+            ? Chip(
+                label: Text(
+                  widget.lockedReason ?? 'Pending',
+                  style: const TextStyle(fontSize: 11),
+                ),
+                visualDensity: VisualDensity.compact,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      Icons.check_circle,
-                      color: Colors.green.shade600,
-                    ),
-                    tooltip: 'Approve',
-                    onPressed: () => _tap('approved'),
+            : _busy
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          Icons.check_circle,
+                          color: Colors.green.shade600,
+                        ),
+                        tooltip: 'Approve',
+                        onPressed: () => _tap('approved'),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.cancel,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        tooltip: 'Reject',
+                        onPressed: () => _tap('rejected'),
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    icon: Icon(
-                      Icons.cancel,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    tooltip: 'Reject',
-                    onPressed: () => _tap('rejected'),
-                  ),
-                ],
-              ),
       ),
     );
   }

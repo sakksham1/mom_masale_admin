@@ -58,6 +58,6 @@ class NotificationsApi {
   }
 
   Future<void> markRead({int? id}) {
-    return client.post('/api/admin/notifications', {if (id != null) 'id': id});
+    return client.post('/api/admin/notifications', {'id': ?id});
   }
 }

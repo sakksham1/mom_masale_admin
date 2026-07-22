@@ -27,14 +27,15 @@ class PackagingHistoryScreen extends ConsumerWidget {
         onRefresh: () async => ref.invalidate(myPackagingReportsProvider),
         child: reportsAsync.when(
           data: (reports) {
-            if (reports.isEmpty)
+            if (reports.isEmpty) {
               return const Center(child: Text('No reports yet.'));
+            }
             return ListView.separated(
               padding: const EdgeInsets.only(
                 bottom: LayoutConstants.navBarClearance,
               ),
               itemCount: reports.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
+              separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (context, i) {
                 final r = reports[i];
                 return ListTile(

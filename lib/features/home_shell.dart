@@ -34,6 +34,12 @@ const _allNavItems = [
     'Inventory',
   ),
   _NavItem(
+    '/catalog',
+    Icons.category_outlined,
+    Icons.category,
+    'Catalog',
+  ),
+  _NavItem(
     '/approvals',
     Icons.fact_check_outlined,
     Icons.fact_check,
