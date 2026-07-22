@@ -91,6 +91,9 @@ class ApiClient {
   Future<Response> patch(String path, Map<String, dynamic> body) =>
       _run(() => dio.patch(path, data: body));
 
+  Future<Response> postMultipart(String path, FormData body) =>
+      _run(() => dio.post(path, data: body));
+
   Future<Response> delete(String path) => _run(() => dio.delete(path));
 
   Future<bool> isLoggedInAdmin() async {
