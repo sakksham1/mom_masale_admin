@@ -204,6 +204,9 @@ class _PackagingBulkReportScreenState
                       ),
                     ),
                     FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(160, 48),
+                      ),
                       onPressed: _submitting
                           ? null
                           : () => _submitAll(products),
