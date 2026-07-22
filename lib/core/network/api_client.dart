@@ -96,6 +96,9 @@ class ApiClient {
 
   Future<Response> delete(String path) => _run(() => dio.delete(path));
 
+  Future<Response> deleteWithBody(String path, Map<String, dynamic> body) =>
+      _run(() => dio.delete(path, data: body));
+
   Future<bool> isLoggedInAdmin() async {
     try {
       final res = await dio.get('/api/admin/stats');

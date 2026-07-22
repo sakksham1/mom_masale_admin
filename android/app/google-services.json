@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "753661759229",
+    "project_id": "mom-masale-admin",
+    "storage_bucket": "mom-masale-admin.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:753661759229:android:b03a0aea28c8294a1b3894",
+        "android_client_info": {
+          "package_name": "com.example.mom_masale_admin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAoDIgR0gx-9eneXD7ZnCdp7kJJmPIHunw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

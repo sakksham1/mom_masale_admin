@@ -1,16 +1,14 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'app_user.dart';
 import 'user_role.dart';
 import '../network/api_client.dart';
+import '../notifications/push_notification_service.dart';
 
-/// Extends ChangeNotifier so go_router's refreshListenable can react to
-/// login/logout without any manual navigation calls scattered in screens.
 class AuthController extends ChangeNotifier {
   final ApiClient _client;
   AuthController(this._client) {
     _client.onUnauthorized = () {
-      // Any 401 from anywhere in the app clears the session and the
-      // router's redirect logic bounces the user to /login automatically.
       _user = null;
       notifyListeners();
     };
@@ -24,10 +22,15 @@ class AuthController extends ChangeNotifier {
   bool _initializing = true;
   bool get initializing => _initializing;
 
-  /// Call once at app startup to restore an existing cookie session.
+  bool _canReceivePush(UserRole role) =>
+      role == UserRole.admin || role == UserRole.manager;
+
   Future<void> restoreSession() async {
     try {
       _user = await _client.fetchCurrentUser();
+      if (_user != null && _canReceivePush(_user!.role)) {
+        unawaited(PushNotificationService.instance.init(_client));
+      }
     } catch (e, st) {
       debugPrint('restoreSession failed: $e\n$st');
     } finally {
@@ -38,10 +41,14 @@ class AuthController extends ChangeNotifier {
 
   Future<void> login(String email, String password) async {
     _user = await _client.login(email, password);
+    if (_canReceivePush(_user!.role)) {
+      unawaited(PushNotificationService.instance.init(_client));
+    }
     notifyListeners();
   }
 
   Future<void> logout() async {
+    await PushNotificationService.instance.unregister();
     await _client.logout();
     _user = null;
     notifyListeners();
