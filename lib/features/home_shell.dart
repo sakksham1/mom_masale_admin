@@ -5,10 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
 import '../core/auth/route_permissions.dart';
+import '../core/auth/user_role.dart';
 import '../core/network/api_client_provider.dart';
 import '../core/constants/layout_constants.dart';
 import '../features/approvals/approvals_provider.dart';
 import '../shared/widgets/app_banner.dart';
+import '../shared/widgets/nav_more_sheet.dart';
 
 class _NavItem {
   final String path;
@@ -55,6 +57,56 @@ const _allNavItems = [
   ),
 ];
 
+/// Roles whose tab count is congested enough to warrant folding a few
+/// sections behind a "More" popup instead of showing every icon directly.
+/// Admin is the only one today (Overview/Business/Inventory/Catalog/
+/// Approvals + Me = 6 targets); add more roles here once they need it too.
+const _moreGroupedRoles = {UserRole.admin, UserRole.manager};
+
+/// Paths folded behind the "More" popup for roles in [_moreGroupedRoles].
+const _groupedPaths = {'/business', '/stock', '/catalog'};
+
+sealed class _NavSlot {
+  const _NavSlot();
+}
+
+class _SingleSlot extends _NavSlot {
+  final _NavItem item;
+  const _SingleSlot(this.item);
+}
+
+class _MoreSlot extends _NavSlot {
+  final List<_NavItem> items;
+  const _MoreSlot(this.items);
+}
+
+/// Turns the role's accessible tabs into render slots — either a direct
+/// icon, or (for grouped roles, when there are enough grouped tabs to be
+/// worth folding) a single "More" slot standing in for several of them,
+/// inserted where the first grouped tab would have been.
+List<_NavSlot> _buildSlots(List<_NavItem> tabs, UserRole role) {
+  if (!_moreGroupedRoles.contains(role)) {
+    return [for (final t in tabs) _SingleSlot(t)];
+  }
+  final grouped = tabs.where((t) => _groupedPaths.contains(t.path)).toList();
+  if (grouped.length < 2) {
+    return [for (final t in tabs) _SingleSlot(t)];
+  }
+  final slots = <_NavSlot>[];
+  var inserted = false;
+  for (final t in tabs) {
+    if (_groupedPaths.contains(t.path)) {
+      if (!inserted) {
+        slots.add(_MoreSlot(grouped));
+        inserted = true;
+      }
+      continue;
+    }
+    slots.add(_SingleSlot(t));
+  }
+  return slots;
+}
+
 class HomeShell extends ConsumerWidget {
   final Widget child;
   const HomeShell({super.key, required this.child});
@@ -70,11 +122,9 @@ class HomeShell extends ConsumerWidget {
     final tabs = _allNavItems
         .where((i) => canAccessRoute(i.path, role))
         .toList();
+    final slots = _buildSlots(tabs, role);
 
     final onAccount = _onAccountPage(location);
-    final selectedIndex = onAccount
-        ? -1
-        : tabs.indexWhere((t) => location.startsWith(t.path));
 
     // Only watch the approvals queue if the role can even see that tab —
     // no point polling it for roles (packaging, warehouser, salesperson)
@@ -98,12 +148,12 @@ class HomeShell extends ConsumerWidget {
             child: SafeArea(
               top: false,
               child: _FloatingNavBar(
-                tabs: tabs,
-                selectedIndex: selectedIndex,
+                slots: slots,
+                location: location,
                 onAccount: onAccount,
                 scheme: scheme,
                 showApprovalsDot: hasPendingApprovals,
-                onTabTap: (i) => context.go(tabs[i].path),
+                onNavigate: (path) => context.go(path),
                 onAccountTap: () => context.go('/me'),
               ),
             ),
@@ -114,27 +164,74 @@ class HomeShell extends ConsumerWidget {
   }
 }
 
-class _FloatingNavBar extends StatelessWidget {
-  final List<_NavItem> tabs;
-  final int selectedIndex;
+class _FloatingNavBar extends StatefulWidget {
+  final List<_NavSlot> slots;
+  final String location;
   final bool onAccount;
   final ColorScheme scheme;
   final bool showApprovalsDot;
-  final ValueChanged<int> onTabTap;
+  final ValueChanged<String> onNavigate;
   final VoidCallback onAccountTap;
 
   const _FloatingNavBar({
-    required this.tabs,
-    required this.selectedIndex,
+    required this.slots,
+    required this.location,
     required this.onAccount,
     required this.scheme,
     required this.showApprovalsDot,
-    required this.onTabTap,
+    required this.onNavigate,
     required this.onAccountTap,
   });
 
   @override
+  State<_FloatingNavBar> createState() => _FloatingNavBarState();
+}
+
+class _FloatingNavBarState extends State<_FloatingNavBar> {
+  bool _moreOpen = false;
+
+  Color _colorFor(String path) {
+    switch (path) {
+      case '/business':
+        return AppColors.turmeric;
+      case '/stock':
+        return AppColors.cumin;
+      case '/catalog':
+        return AppColors.paprika;
+      default:
+        return AppColors.maroon;
+    }
+  }
+
+  void _openMore(List<_NavItem> items) {
+    setState(() => _moreOpen = true);
+    NavMoreSheet.show(
+      context,
+      bottomOffset:
+          LayoutConstants.navBarBottomMargin +
+          LayoutConstants.navBarHeight +
+          14,
+      items: [
+        for (final item in items)
+          NavMoreItem(
+            icon: item.icon,
+            label: item.label,
+            color: _colorFor(item.path),
+            onTap: () => widget.onNavigate(item.path),
+          ),
+      ],
+      onDismissed: () {
+        if (mounted) setState(() => _moreOpen = false);
+      },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final scheme = widget.scheme;
+    final location = widget.location;
+    final onAccount = widget.onAccount;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(32),
       child: BackdropFilter(
@@ -162,16 +259,32 @@ class _FloatingNavBar extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    for (var i = 0; i < tabs.length; i++)
-                      _NavIcon(
-                        icon: tabs[i].icon,
-                        selectedIcon: tabs[i].selectedIcon,
-                        label: tabs[i].label,
-                        selected: selectedIndex == i,
-                        showDot:
-                            tabs[i].path == '/approvals' && showApprovalsDot,
-                        onTap: () => onTabTap(i),
-                      ),
+                    for (final slot in widget.slots)
+                      if (slot is _SingleSlot)
+                        _NavIcon(
+                          icon: slot.item.icon,
+                          selectedIcon: slot.item.selectedIcon,
+                          label: slot.item.label,
+                          selected:
+                              !onAccount && location.startsWith(slot.item.path),
+                          showDot:
+                              slot.item.path == '/approvals' &&
+                              widget.showApprovalsDot,
+                          onTap: () => widget.onNavigate(slot.item.path),
+                        )
+                      else if (slot is _MoreSlot)
+                        _NavIcon(
+                          icon: Icons.grid_view_outlined,
+                          selectedIcon: Icons.grid_view_rounded,
+                          label: 'More',
+                          selected:
+                              !onAccount &&
+                              (_moreOpen ||
+                                  slot.items.any(
+                                    (i) => location.startsWith(i.path),
+                                  )),
+                          onTap: () => _openMore(slot.items),
+                        ),
                   ],
                 ),
               ),
@@ -186,7 +299,7 @@ class _FloatingNavBar extends StatelessWidget {
                 selectedIcon: Icons.person,
                 label: 'Me',
                 selected: onAccount,
-                onTap: onAccountTap,
+                onTap: widget.onAccountTap,
                 accent: true,
               ),
             ],
