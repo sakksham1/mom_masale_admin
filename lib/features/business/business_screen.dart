@@ -6,6 +6,7 @@ import '../customers/customers_list_screen.dart';
 import '../db_explorer/db_explorer_screen.dart' show DbExplorerView;
 import '../../core/auth/user_role.dart';
 import '../../core/network/api_client_provider.dart';
+import 'staff_logins_section.dart';
 
 /// Combines Orders, Customers (and, for admin, the read-only DB Explorer;
 /// for manager, a Staff view instead) under one "Business" nav entry.
@@ -55,11 +56,13 @@ class _BusinessScreenState extends ConsumerState<BusinessScreen>
             Tab(text: 'Orders'),
             Tab(text: 'Customers'),
             Tab(text: 'DB Explorer'),
+            Tab(text: 'Staff Logins'),
           ]
         : const [
             Tab(text: 'Orders'),
             Tab(text: 'Customers'),
             Tab(text: 'Staff'),
+            Tab(text: 'Staff Logins'),
           ];
 
     final controller = _controllerFor(tabs.length);
@@ -77,7 +80,12 @@ class _BusinessScreenState extends ConsumerState<BusinessScreen>
       body: TabBarView(
         controller: controller,
         children: isAdmin
-            ? const [OrdersTab(), CustomersTab(), DbExplorerView()]
+            ? const [
+                OrdersTab(),
+                CustomersTab(),
+                DbExplorerView(),
+                StaffLoginsSection(),
+              ]
             : const [
                 OrdersTab(editable: false),
                 CustomersTab(
@@ -90,6 +98,7 @@ class _BusinessScreenState extends ConsumerState<BusinessScreen>
                   roleFilter: _staffRoles,
                   emptyMessage: 'No staff members yet.',
                 ),
+                StaffLoginsSection(),
               ],
       ),
     );

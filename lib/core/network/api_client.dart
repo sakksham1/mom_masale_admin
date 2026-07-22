@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import '../config/env.dart';
 import 'api_exception.dart';
 import '../auth/app_user.dart';
+import '../utils/platform_name.dart';
 
 class ApiClient {
   late final Dio dio;
@@ -117,6 +118,7 @@ class ApiClient {
       final res = await post('/api/auth/login', {
         'email': email,
         'password': password,
+        'platform': platformName(),
       });
       return AppUser.fromJson(res.data['user']);
     } on UnauthorizedException {

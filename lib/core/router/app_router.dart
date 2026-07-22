@@ -17,6 +17,7 @@ import '../../features/packaging/packaging_mode_select_screen.dart';
 import '../../features/packaging/packaging_bulk_report_screen.dart';
 import '../../features/db_explorer/db_explorer_screen.dart';
 import '../../features/catalog/catalog_list_screen.dart';
+import '../../features/sessions/sessions_screen.dart';
 
 GoRouter buildRouter(AuthController auth) {
   return GoRouter(
@@ -87,6 +88,7 @@ GoRouter buildRouter(AuthController auth) {
             path: '/db-explorer',
             builder: (c, s) => const DbExplorerScreen(),
           ),
+          GoRoute(path: '/sessions', builder: (c, s) => const SessionsScreen()),
         ],
       ),
     ],

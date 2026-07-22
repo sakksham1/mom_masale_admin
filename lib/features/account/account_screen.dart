@@ -208,6 +208,8 @@ String _routeLabel(String path) {
       return 'Approvals';
     case '/db-explorer':
       return 'DB Explorer';
+    case '/sessions':
+      return 'My Sessions';
     default:
       return path;
   }
