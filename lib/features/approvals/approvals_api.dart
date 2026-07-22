@@ -54,38 +54,72 @@ class PendingPackaging {
   );
 }
 
+/// A pending catalog edit — `updates` is the same whitelisted shape the
+/// admin PATCH endpoint accepts (name, category, image, prices, the four
+/// flags, seo). Built from the generic `payload` column, decoded here so
+/// the UI never has to know about the old name/price-only special case.
+/// Purely site content — never touches stock.
 class PendingProductCore {
   final int id;
   final String? productSlug;
-  final String field, requestedByName, createdAt;
-  final Map<String, dynamic> payload;
+  final String requestedByName, createdAt;
+  final Map<String, dynamic> updates;
+
   PendingProductCore({
     required this.id,
     this.productSlug,
-    required this.field,
-    required this.payload,
+    required this.updates,
     required this.requestedByName,
     required this.createdAt,
   });
 
   factory PendingProductCore.fromJson(Map<String, dynamic> j) {
     final rawPayload = j['payload'];
-    final payload = rawPayload is String
+    final updates = rawPayload is String
         ? (jsonDecode(rawPayload) as Map<String, dynamic>)
         : (rawPayload as Map<String, dynamic>? ?? {});
     return PendingProductCore(
       id: j['id'],
       productSlug: j['product_slug'],
-      field: j['field'],
-      payload: payload,
+      updates: updates,
       requestedByName: j['requested_by_name'],
       createdAt: j['created_at'] ?? '',
     );
   }
+
+  String get summary => describeCatalogUpdates(updates);
 }
 
-/// New: finished-product stock adjustments filed by a warehouser, awaiting
-/// manager/admin decision. Mirrors PendingRawMaterial.
+/// Turns a raw updates map into a short, readable diff line for the
+/// approvals list — e.g. `Name → "Garam Masala" · 250g → ₹180 · Featured: on`.
+String describeCatalogUpdates(Map<String, dynamic> updates) {
+  final parts = <String>[];
+  if (updates['name'] != null) parts.add('Name → "${updates['name']}"');
+  if (updates['category'] != null) parts.add('Category → ${updates['category']}');
+  if (updates['image'] != null) parts.add('Image updated');
+  final prices = updates['prices'];
+  if (prices is Map) {
+    prices.forEach((size, price) => parts.add('$size → ₹$price'));
+  }
+  if (updates['comingSoon'] != null) {
+    parts.add('Coming soon: ${updates['comingSoon'] == true ? 'on' : 'off'}');
+  }
+  if (updates['featured'] != null) {
+    parts.add('Featured: ${updates['featured'] == true ? 'on' : 'off'}');
+  }
+  if (updates['bestseller'] != null) {
+    parts.add('Bestseller: ${updates['bestseller'] == true ? 'on' : 'off'}');
+  }
+  if (updates['newArrival'] != null) {
+    parts.add('New arrival: ${updates['newArrival'] == true ? 'on' : 'off'}');
+  }
+  if (updates['seo'] != null) parts.add('SEO/description updated');
+  return parts.isEmpty ? 'Catalog update' : parts.join(' · ');
+}
+
+/// Finished-product stock adjustments filed by a warehouser, awaiting
+/// manager/admin decision. Unrelated to catalog editing — kept exactly as
+/// it already was.
 class PendingProductStock {
   final int id, changeQty;
   final String productSlug,
@@ -166,6 +200,9 @@ class ApprovalsApi {
 
   /// type: 'raw_material' | 'packaging' | 'product_core' | 'product_stock'
   /// decision: 'approved' | 'rejected'
+  ///
+  /// The backend enforces that only an admin can decide 'product_core' —
+  /// a manager calling this for that type gets a 403.
   Future<void> decide({
     required String type,
     required int id,

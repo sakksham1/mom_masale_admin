@@ -54,7 +54,7 @@ class RawMaterialsApi {
       'name': name,
       'unit': unit,
       'qty': qty,
-      if (lowStockThreshold != null) 'lowStockThreshold': lowStockThreshold,
+      'lowStockThreshold': ?lowStockThreshold,
     });
   }
 

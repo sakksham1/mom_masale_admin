@@ -105,7 +105,7 @@ class SalesApi {
       'saleAmount': saleAmount,
       if (customerName != null && customerName.isNotEmpty)
         'customerName': customerName,
-      if (reportDate != null) 'reportDate': reportDate,
+      'reportDate': ?reportDate,
     });
   }
 
