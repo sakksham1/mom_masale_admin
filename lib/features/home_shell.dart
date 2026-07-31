@@ -9,6 +9,7 @@ import '../core/auth/user_role.dart';
 import '../core/network/api_client_provider.dart';
 import '../core/constants/layout_constants.dart';
 import '../features/approvals/approvals_provider.dart';
+import '../features/reviews/reviews_provider.dart';
 import '../shared/widgets/app_banner.dart';
 import '../shared/widgets/nav_more_sheet.dart';
 
@@ -38,6 +39,12 @@ const _allNavItems = [
   ),
   _NavItem('/catalog', Icons.category_outlined, Icons.category, 'Catalog'),
   _NavItem(
+    '/reviews',
+    Icons.rate_review_outlined,
+    Icons.rate_review,
+    'Reviews',
+  ),
+  _NavItem(
     '/approvals',
     Icons.fact_check_outlined,
     Icons.fact_check,
@@ -59,12 +66,12 @@ const _allNavItems = [
 
 /// Roles whose tab count is congested enough to warrant folding a few
 /// sections behind a "More" popup instead of showing every icon directly.
-/// Admin is the only one today (Overview/Business/Inventory/Catalog/
-/// Approvals + Me = 6 targets); add more roles here once they need it too.
+/// Admin is the only one today (Overview/Business/Inventory/Catalog/Reviews/
+/// Approvals + Me = 7 targets); add more roles here once they need it too.
 const _moreGroupedRoles = {UserRole.admin, UserRole.manager};
 
 /// Paths folded behind the "More" popup for roles in [_moreGroupedRoles].
-const _groupedPaths = {'/business', '/stock', '/catalog'};
+const _groupedPaths = {'/business', '/stock', '/catalog', '/reviews'};
 
 sealed class _NavSlot {
   const _NavSlot();
@@ -126,15 +133,26 @@ class HomeShell extends ConsumerWidget {
 
     final onAccount = _onAccountPage(location);
 
-    // Only watch the approvals queue if the role can even see that tab —
-    // no point polling it for roles (packaging, warehouser, salesperson)
-    // who never see the Approvals nav item at all.
+    // Only watch a queue if the role can even see that tab — no point
+    // polling it for roles who never see the tab at all.
     final canSeeApprovals = tabs.any((t) => t.path == '/approvals');
     final hasPendingApprovals = canSeeApprovals
         ? ref
               .watch(approvalsQueueProvider)
               .maybeWhen(data: (q) => !q.isEmpty, orElse: () => false)
         : false;
+
+    final canSeeReviews = tabs.any((t) => t.path == '/reviews');
+    final hasPendingReviews = canSeeReviews
+        ? ref
+              .watch(pendingReviewsProvider)
+              .maybeWhen(data: (r) => r.isNotEmpty, orElse: () => false)
+        : false;
+
+    final pendingDots = <String, bool>{
+      '/approvals': hasPendingApprovals,
+      '/reviews': hasPendingReviews,
+    };
 
     return Scaffold(
       appBar: const AppBanner(),
@@ -152,7 +170,7 @@ class HomeShell extends ConsumerWidget {
                 location: location,
                 onAccount: onAccount,
                 scheme: scheme,
-                showApprovalsDot: hasPendingApprovals,
+                pendingDots: pendingDots,
                 onNavigate: (path) => context.go(path),
                 onAccountTap: () => context.go('/me'),
               ),
@@ -169,7 +187,7 @@ class _FloatingNavBar extends StatefulWidget {
   final String location;
   final bool onAccount;
   final ColorScheme scheme;
-  final bool showApprovalsDot;
+  final Map<String, bool> pendingDots;
   final ValueChanged<String> onNavigate;
   final VoidCallback onAccountTap;
 
@@ -178,7 +196,7 @@ class _FloatingNavBar extends StatefulWidget {
     required this.location,
     required this.onAccount,
     required this.scheme,
-    required this.showApprovalsDot,
+    required this.pendingDots,
     required this.onNavigate,
     required this.onAccountTap,
   });
@@ -198,6 +216,8 @@ class _FloatingNavBarState extends State<_FloatingNavBar> {
         return AppColors.cumin;
       case '/catalog':
         return AppColors.paprika;
+      case '/reviews':
+        return const Color(0xFF3D6B57);
       default:
         return AppColors.maroon;
     }
@@ -267,9 +287,7 @@ class _FloatingNavBarState extends State<_FloatingNavBar> {
                           label: slot.item.label,
                           selected:
                               !onAccount && location.startsWith(slot.item.path),
-                          showDot:
-                              slot.item.path == '/approvals' &&
-                              widget.showApprovalsDot,
+                          showDot: widget.pendingDots[slot.item.path] ?? false,
                           onTap: () => widget.onNavigate(slot.item.path),
                         )
                       else if (slot is _MoreSlot)
@@ -283,6 +301,9 @@ class _FloatingNavBarState extends State<_FloatingNavBar> {
                                   slot.items.any(
                                     (i) => location.startsWith(i.path),
                                   )),
+                          showDot: slot.items.any(
+                            (i) => widget.pendingDots[i.path] == true,
+                          ),
                           onTap: () => _openMore(slot.items),
                         ),
                   ],

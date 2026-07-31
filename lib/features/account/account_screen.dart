@@ -198,6 +198,8 @@ String _routeLabel(String path) {
       return 'Stock';
     case '/catalog':
       return 'Catalog';
+    case '/reviews':
+      return 'Reviews';
     case '/packaging':
       return 'Report Packaging';
     case '/packaging/history':
