@@ -3,10 +3,10 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*.*.*'   # e.g. v1.0.0 triggers a release
+      - 'v*.*.*'
 
 permissions:
-  contents: write   # needed to create releases and upload assets
+  contents: write
 
 jobs:
   build-android:
@@ -21,28 +21,39 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.8'   # matches your pubspec's flutter sdk constraint
+          flutter-version: '3.44.8'
           channel: 'stable'
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build APK (split per ABI, smaller downloads)
-        run: flutter build apk --release --split-per-abi
+      - name: Decode release keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release-keystore.jks
 
-      - name: Rename APKs for clarity
+      - name: Create key.properties
+        run: |
+          cat > android/key.properties <<EOF
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          storeFile=release-keystore.jks
+          EOF
+
+      - name: Build signed APK (arm64-v8a only)
+        run: flutter build apk --release --target-platform android-arm64
+
+      - name: Rename APK for clarity
         run: |
           mkdir -p release-artifacts
-          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk release-artifacts/mom-masale-admin-armeabi-v7a.apk
-          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk release-artifacts/mom-masale-admin-arm64-v8a.apk
-          cp build/app/outputs/flutter-apk/app-x86_64-release.apk release-artifacts/mom-masale-admin-x86_64.apk
+          cp build/app/outputs/flutter-apk/app-release.apk release-artifacts/mom-masale-admin-arm64-v8a.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: android-apks
+          name: android-apk
           path: release-artifacts/*.apk
 
-  build-windows:
+  build-windows-x64:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -58,19 +69,46 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build Windows release
-        run: flutter build windows --release
+      - name: Build Windows release (x64)
+        run: flutter build windows --release --target-platform windows-x64
 
-      - name: Zip the Windows build
-        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath mom-masale-admin-windows.zip
+      - name: Zip the Windows x64 build
+        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath mom-masale-admin-windows-x64.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: windows-build
-          path: mom-masale-admin-windows.zip
+          name: windows-x64-build
+          path: mom-masale-admin-windows-x64.zip
+
+  build-windows-arm64:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: 'stable'
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows release (arm64)
+        run: flutter build windows --release --target-platform windows-arm64
+
+      - name: Zip the Windows arm64 build
+        run: Compress-Archive -Path build/windows/arm64/runner/Release/* -DestinationPath mom-masale-admin-windows-arm64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-arm64-build
+          path: mom-masale-admin-windows-arm64.zip
 
   release:
-    needs: [build-android, build-windows]
+    needs: [build-android, build-windows-x64, build-windows-arm64]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -81,6 +119,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/android-apks/*.apk
-            artifacts/windows-build/*.zip
+            artifacts/android-apk/*.apk
+            artifacts/windows-x64-build/*.zip
+            artifacts/windows-arm64-build/*.zip
           generate_release_notes: true
