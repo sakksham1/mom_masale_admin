@@ -117,8 +117,9 @@ class CatalogProduct {
 MediaType _mediaTypeFor(String filename) {
   final lower = filename.toLowerCase();
   if (lower.endsWith('.png')) return MediaType('image', 'png');
-  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg'))
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
     return MediaType('image', 'jpeg');
+  }
   return MediaType('image', 'webp');
 }
 

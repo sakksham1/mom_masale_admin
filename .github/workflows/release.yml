@@ -21,7 +21,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.0'   # matches your pubspec's flutter sdk constraint
+          flutter-version: '3.44.8'   # matches your pubspec's flutter sdk constraint
           channel: 'stable'
 
       - name: Install dependencies

@@ -10,11 +10,23 @@ import '../../core/constants/layout_constants.dart';
 import '../../core/utils/haptics.dart';
 import '../../shared/widgets/success_pulse.dart';
 import '../../shared/widgets/tap_scale.dart';
+import '../../core/config/env.dart';
 
 /// Approval queue for customer product reviews. Two tabs: Pending (with
 /// actions) and Approved (read-only history). Decide is admin-only on the
 /// backend — manager sees everything but gets a locked chip instead of
 /// buttons, same convention as the Product Catalog approvals.
+
+String? _resolveImageUrl(String path) {
+  final trimmed = path.trim();
+  if (trimmed.isEmpty) return null;
+  final uri = Uri.tryParse(trimmed);
+  if (uri == null) return null;
+  if (uri.hasScheme && uri.hasAuthority) return trimmed;
+  final normalized = trimmed.startsWith('/') ? trimmed : '/$trimmed';
+  return '${Env.apiBaseUrl}$normalized';
+}
+
 class ReviewsScreen extends ConsumerStatefulWidget {
   const ReviewsScreen({super.key});
 
@@ -337,27 +349,33 @@ class _ReviewCardState extends ConsumerState<_ReviewCard> {
                 scrollDirection: Axis.horizontal,
                 itemCount: r.images.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (context, i) => TapScale(
-                  onTap: () => _openImage(r.images[i]),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.network(
-                      r.images[i],
-                      width: 64,
-                      height: 64,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Container(
-                        width: 64,
-                        height: 64,
-                        color: scheme.surfaceContainerHighest,
-                        child: const Icon(
-                          Icons.image_not_supported_outlined,
-                          size: 18,
-                        ),
-                      ),
+                itemBuilder: (context, i) {
+                  final resolved = _resolveImageUrl(r.images[i]);
+                  Widget fallback() => Container(
+                    width: 64,
+                    height: 64,
+                    color: scheme.surfaceContainerHighest,
+                    child: const Icon(
+                      Icons.image_not_supported_outlined,
+                      size: 18,
                     ),
-                  ),
-                ),
+                  );
+                  return TapScale(
+                    onTap: resolved == null ? null : () => _openImage(resolved),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: resolved == null
+                          ? fallback()
+                          : Image.network(
+                              resolved,
+                              width: 64,
+                              height: 64,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => fallback(),
+                            ),
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -390,25 +408,29 @@ class _ReviewCardState extends ConsumerState<_ReviewCard> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: scheme.error,
-                      side: BorderSide(
-                        color: scheme.error.withValues(alpha: 0.5),
+                  Flexible(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: scheme.error,
+                        side: BorderSide(
+                          color: scheme.error.withValues(alpha: 0.5),
+                        ),
                       ),
+                      onPressed: () => _decide('rejected'),
+                      icon: const Icon(Icons.close, size: 18),
+                      label: const Text('Reject'),
                     ),
-                    onPressed: () => _decide('rejected'),
-                    icon: const Icon(Icons.close, size: 18),
-                    label: const Text('Reject'),
                   ),
                   const SizedBox(width: 8),
-                  FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF2E7D32),
+                  Flexible(
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF2E7D32),
+                      ),
+                      onPressed: () => _decide('approved'),
+                      icon: const Icon(Icons.check, size: 18),
+                      label: const Text('Approve'),
                     ),
-                    onPressed: () => _decide('approved'),
-                    icon: const Icon(Icons.check, size: 18),
-                    label: const Text('Approve'),
                   ),
                 ],
               ),
