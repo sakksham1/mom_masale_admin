@@ -212,6 +212,8 @@ String _routeLabel(String path) {
       return 'DB Explorer';
     case '/sessions':
       return 'My Sessions';
+    case '/analytics':
+      return 'Analytics';
     default:
       return path;
   }

@@ -51,6 +51,12 @@ const _allNavItems = [
     'Approvals',
   ),
   _NavItem(
+    '/analytics',
+    Icons.query_stats_outlined,
+    Icons.query_stats,
+    'Analytics',
+  ),
+  _NavItem(
     '/sales',
     Icons.point_of_sale_outlined,
     Icons.point_of_sale,

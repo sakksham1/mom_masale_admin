@@ -6,6 +6,7 @@ const Map<String, Set<UserRole>> routePermissions = {
   '/business': {UserRole.admin, UserRole.manager},
   '/catalog': {UserRole.admin, UserRole.manager},
   '/reviews': {UserRole.admin, UserRole.manager},
+  '/analytics': {UserRole.admin, UserRole.manager},
   '/me': {
     UserRole.admin,
     UserRole.manager,
