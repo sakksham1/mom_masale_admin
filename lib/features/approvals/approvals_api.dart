@@ -6,6 +6,8 @@ class PendingRawMaterial {
   final String materialName, reason, requestedByName, createdAt;
   final num delta;
   final String? note;
+  final num? inputAmount; // NEW — amount as typed, in inputUnit
+  final String? inputUnit; // NEW — e.g. "g", "ml", "kg"
   PendingRawMaterial({
     required this.id,
     required this.rawMaterialId,
@@ -15,6 +17,8 @@ class PendingRawMaterial {
     this.note,
     required this.requestedByName,
     required this.createdAt,
+    this.inputAmount,
+    this.inputUnit,
   });
 
   factory PendingRawMaterial.fromJson(Map<String, dynamic> j) =>
@@ -27,6 +31,8 @@ class PendingRawMaterial {
         note: j['note'],
         requestedByName: j['requested_by_name'],
         createdAt: j['created_at'] ?? '',
+        inputAmount: j['input_amount'],
+        inputUnit: j['input_unit'],
       );
 }
 
@@ -95,7 +101,8 @@ class PendingProductCore {
 String describeCatalogUpdates(Map<String, dynamic> updates) {
   final parts = <String>[];
   if (updates['name'] != null) parts.add('Name → "${updates['name']}"');
-  if (updates['category'] != null) parts.add('Category → ${updates['category']}');
+  if (updates['category'] != null)
+    parts.add('Category → ${updates['category']}');
   if (updates['image'] != null) parts.add('Image updated');
   final prices = updates['prices'];
   if (prices is Map) {

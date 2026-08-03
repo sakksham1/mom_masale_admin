@@ -34,7 +34,9 @@ class _WarehouseTabState extends ConsumerState<WarehouseTab> {
   Widget build(BuildContext context) {
     final materialsAsync = ref.watch(rawMaterialsProvider);
     final role = ref.watch(authControllerProvider).role;
-    final canManage = role == UserRole.warehouser;
+    // Packaging can now manage raw materials the same as warehouser — they're
+    // often the ones physically pulling stock and best placed to log usage.
+    final canManage = role == UserRole.warehouser || role == UserRole.packaging;
 
     return Stack(
       children: [
@@ -286,7 +288,8 @@ class _MaterialCardState extends ConsumerState<_MaterialCard> {
           .read(rawMaterialsApiProvider)
           .submitAdjustment(
             rawMaterialId: widget.material.id,
-            delta: result.delta,
+            amount: result.amount,
+            unit: result.unit,
             reason: result.reason,
             note: result.note,
           );
@@ -363,8 +366,8 @@ class _MaterialCardState extends ConsumerState<_MaterialCard> {
                   const SizedBox(height: 2),
                   Text(
                     m.isLow
-                        ? 'Low stock · threshold ${m.lowStockThreshold}'
-                        : m.unit,
+                        ? 'Low stock · threshold ${formatQty(m.unit, m.lowStockThreshold ?? 0)}'
+                        : 'Tap to log usage or restock',
                     style: TextStyle(
                       fontSize: 12,
                       color: m.isLow ? accent : scheme.onSurfaceVariant,
@@ -382,17 +385,12 @@ class _MaterialCardState extends ConsumerState<_MaterialCard> {
               )
             else ...[
               Text(
-                '${m.qty}',
+                formatQty(m.unit, m.qty),
                 style: const TextStyle(
                   fontFamily: 'IBMPlexMono',
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                m.unit,
-                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
               ),
               if (widget.canManage) ...[
                 const SizedBox(width: 4),
@@ -508,7 +506,12 @@ class _AddMaterialSheetState extends State<_AddMaterialSheet> {
             decoration: const InputDecoration(labelText: 'Name'),
           ),
           const SizedBox(height: 14),
-          Text('Unit', style: Theme.of(context).textTheme.labelLarge),
+          Text('Base unit', style: Theme.of(context).textTheme.labelLarge),
+          const SizedBox(height: 4),
+          Text(
+            'Adjustments can still be logged in grams/ml later.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -526,14 +529,16 @@ class _AddMaterialSheetState extends State<_AddMaterialSheet> {
           TextField(
             controller: _qtyCtrl,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'Starting quantity'),
+            decoration: InputDecoration(
+              labelText: 'Starting quantity ($_unit)',
+            ),
           ),
           const SizedBox(height: 14),
           TextField(
             controller: _thresholdCtrl,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-              labelText: 'Low stock threshold (optional)',
+            decoration: InputDecoration(
+              labelText: 'Low stock threshold ($_unit, optional)',
             ),
           ),
           const SizedBox(height: 22),
@@ -545,23 +550,15 @@ class _AddMaterialSheetState extends State<_AddMaterialSheet> {
 }
 
 class _AdjustInput {
-  final num delta;
+  final num amount; // signed, expressed in `unit`
+  final String unit;
   final String reason;
   final String? note;
-  _AdjustInput(this.delta, this.reason, this.note);
-}
-
-class _AdjustMaterialSheet extends StatefulWidget {
-  final RawMaterial material;
-  const _AdjustMaterialSheet({required this.material});
-
-  @override
-  State<_AdjustMaterialSheet> createState() => _AdjustMaterialSheetState();
+  _AdjustInput(this.amount, this.unit, this.reason, this.note);
 }
 
 /// Small locked/disabled-looking icon slot that takes the place of a
 /// stepper button when that direction isn't valid for the selected reason.
-/// Keeps the row visually balanced instead of leaving empty space.
 class _LockedDirectionIcon extends StatelessWidget {
   final IconData icon;
   final Color color;
@@ -590,15 +587,32 @@ class _LockedDirectionIcon extends StatelessWidget {
   }
 }
 
+class _AdjustMaterialSheet extends StatefulWidget {
+  final RawMaterial material;
+  const _AdjustMaterialSheet({required this.material});
+
+  @override
+  State<_AdjustMaterialSheet> createState() => _AdjustMaterialSheetState();
+}
+
 class _AdjustMaterialSheetState extends State<_AdjustMaterialSheet> {
-  num _delta = 0;
-  final _deltaCtrl = TextEditingController(text: '0');
+  late String _unit;
+  num _amount = 0; // signed, expressed in _unit
+  final _amountCtrl = TextEditingController(text: '0');
   final _noteCtrl = TextEditingController();
   String _reason = rawMaterialAdjustReasons.first;
 
   @override
+  void initState() {
+    super.initState();
+    // Default to the everyday sub-unit (g/ml) when the material has one —
+    // that's the common case ("used 350g"), not fractions of a kilo.
+    _unit = inputUnitsFor(widget.material.unit).first;
+  }
+
+  @override
   void dispose() {
-    _deltaCtrl.dispose();
+    _amountCtrl.dispose();
     _noteCtrl.dispose();
     super.dispose();
   }
@@ -606,19 +620,22 @@ class _AdjustMaterialSheetState extends State<_AdjustMaterialSheet> {
   bool get _isRestock => _reason == 'restock';
   bool get _isConsumption => _reason == 'consumption';
 
-  // Restock is always +, consumption is always -, correction keeps sign.
+  // Grams/ml step by 10s — stepping by 1g at a time is tedious; kg/l/units
+  // still step by 1.
+  num get _step => (_unit == 'g' || _unit == 'ml') ? 10 : 1;
+
   num _signedFor(String reason, num magnitude) {
     if (reason == 'restock') return magnitude.abs();
     if (reason == 'consumption') return -magnitude.abs();
     return magnitude;
   }
 
-  void _step(num by) {
+  void _bump(num by) {
     setState(() {
-      _delta += by;
-      if (_isRestock && _delta < 0) _delta = 0;
-      if (_isConsumption && _delta > 0) _delta = 0;
-      _deltaCtrl.text = _delta.toString();
+      _amount += by;
+      if (_isRestock && _amount < 0) _amount = 0;
+      if (_isConsumption && _amount > 0) _amount = 0;
+      _amountCtrl.text = _trim(_amount);
     });
     Haptics.tap();
   }
@@ -626,15 +643,30 @@ class _AdjustMaterialSheetState extends State<_AdjustMaterialSheet> {
   void _onReasonSelected(String reason) {
     setState(() {
       _reason = reason;
-      _delta = _signedFor(reason, _delta.abs());
-      _deltaCtrl.text = _delta.toString();
+      _amount = _signedFor(reason, _amount.abs());
+      _amountCtrl.text = _trim(_amount);
+    });
+  }
+
+  void _onUnitSelected(String unit) {
+    if (unit == _unit) return;
+    setState(() {
+      // Re-express what's already typed in the new unit rather than
+      // resetting to 0 — switching kg<->g mid-entry shouldn't lose input.
+      final baseAmount = convertToBase(widget.material.unit, _amount, _unit);
+      _unit = unit;
+      _amount = unit == widget.material.unit ? baseAmount : baseAmount * 1000;
+      _amountCtrl.text = _trim(_amount);
     });
   }
 
   void _onFieldChanged(String v) {
     final parsed = num.tryParse(v) ?? 0;
-    setState(() => _delta = _signedFor(_reason, parsed.abs()));
+    setState(() => _amount = _signedFor(_reason, parsed.abs()));
   }
+
+  String _trim(num n) =>
+      n == n.roundToDouble() ? n.toInt().toString() : n.toString();
 
   String get _helperText {
     if (_isRestock) return 'Restocking only adds to stock.';
@@ -644,18 +676,40 @@ class _AdjustMaterialSheetState extends State<_AdjustMaterialSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final projected = widget.material.qty + _delta;
+    final units = inputUnitsFor(widget.material.unit);
+    num projected = widget.material.qty;
+    try {
+      projected += convertToBase(widget.material.unit, _amount, _unit);
+    } catch (_) {}
+
     return _SheetShell(
       title: 'Adjust — ${widget.material.name}',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Current: ${widget.material.qty} ${widget.material.unit}  →  '
-            'New: $projected ${widget.material.unit}',
+            'Current: ${formatQty(widget.material.unit, widget.material.qty)}  →  '
+            'New: ${formatQty(widget.material.unit, projected)}',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 14),
+          if (units.length > 1) ...[
+            Text('Unit', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: units
+                  .map(
+                    (u) => ChoiceChip(
+                      label: Text(u),
+                      selected: _unit == u,
+                      onSelected: (_) => _onUnitSelected(u),
+                    ),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: 14),
+          ],
           Row(
             children: [
               _isRestock
@@ -665,19 +719,19 @@ class _AdjustMaterialSheetState extends State<_AdjustMaterialSheet> {
                       tooltip: 'Not available for restock',
                     )
                   : IconButton.filledTonal(
-                      onPressed: () => _step(-1),
+                      onPressed: () => _bump(-_step),
                       icon: const Icon(Icons.remove),
                     ),
               Expanded(
                 child: TextField(
-                  controller: _deltaCtrl,
+                  controller: _amountCtrl,
                   textAlign: TextAlign.center,
                   keyboardType: TextInputType.numberWithOptions(
                     decimal: true,
                     signed: _reason == 'correction',
                   ),
                   onChanged: _onFieldChanged,
-                  decoration: const InputDecoration(labelText: 'Change'),
+                  decoration: InputDecoration(labelText: 'Change ($_unit)'),
                 ),
               ),
               _isConsumption
@@ -687,7 +741,7 @@ class _AdjustMaterialSheetState extends State<_AdjustMaterialSheet> {
                       tooltip: 'Not available for consumption',
                     )
                   : IconButton.filledTonal(
-                      onPressed: () => _step(1),
+                      onPressed: () => _bump(_step),
                       icon: const Icon(Icons.add),
                     ),
             ],
@@ -721,11 +775,16 @@ class _AdjustMaterialSheetState extends State<_AdjustMaterialSheet> {
           ),
           const SizedBox(height: 22),
           FilledButton(
-            onPressed: _delta == 0
+            onPressed: _amount == 0
                 ? null
                 : () => Navigator.pop(
                     context,
-                    _AdjustInput(_delta, _reason, _noteCtrl.text.trim()),
+                    _AdjustInput(
+                      _amount,
+                      _unit,
+                      _reason,
+                      _noteCtrl.text.trim(),
+                    ),
                   ),
             child: const Text('Submit for Approval'),
           ),

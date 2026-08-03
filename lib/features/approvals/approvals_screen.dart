@@ -68,8 +68,9 @@ class ApprovalsScreen extends ConsumerWidget {
                   _SectionHeader('Raw Material Adjustments'),
                   ...queue.rawMaterial.map(
                     (r) => _DecisionTile(
-                      title:
-                          '${r.materialName}  ${r.delta > 0 ? '+' : ''}${r.delta}',
+                      title: r.inputAmount != null && r.inputUnit != null
+                          ? '${r.materialName}  ${r.inputAmount! > 0 ? '+' : ''}${r.inputAmount} ${r.inputUnit}'
+                          : '${r.materialName}  ${r.delta > 0 ? '+' : ''}${r.delta}',
                       subtitle:
                           'Reason: ${r.reason}'
                           '${r.note != null && r.note!.isNotEmpty ? ' · ${r.note}' : ''}'
@@ -207,32 +208,32 @@ class _DecisionTileState extends State<_DecisionTile> {
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               )
             : _busy
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                          Icons.check_circle,
-                          color: Colors.green.shade600,
-                        ),
-                        tooltip: 'Approve',
-                        onPressed: () => _tap('approved'),
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          Icons.cancel,
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                        tooltip: 'Reject',
-                        onPressed: () => _tap('rejected'),
-                      ),
-                    ],
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.check_circle,
+                      color: Colors.green.shade600,
+                    ),
+                    tooltip: 'Approve',
+                    onPressed: () => _tap('approved'),
                   ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.cancel,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    tooltip: 'Reject',
+                    onPressed: () => _tap('rejected'),
+                  ),
+                ],
+              ),
       ),
     );
   }
