@@ -1,48 +1,64 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/network/api_client_provider.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_colors.dart';
-import 'user_role.dart';
-import 'package:go_router/go_router.dart';
 
-class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+class SignupScreen extends ConsumerStatefulWidget {
+  const SignupScreen({super.key});
   @override
-  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _SignupScreenState extends ConsumerState<SignupScreen> {
+  final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _loading = false;
   bool _obscure = true;
   String? _error;
 
-  Future<void> _login() async {
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _phoneCtrl.dispose();
+    _passwordCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final phone = _phoneCtrl.text.trim();
+    if (_nameCtrl.text.trim().isEmpty ||
+        _emailCtrl.text.trim().isEmpty ||
+        phone.isEmpty ||
+        _passwordCtrl.text.isEmpty) {
+      setState(
+        () => _error = 'Name, email, phone, and password are all required.',
+      );
+      return;
+    }
+    if (!RegExp(r'^[6-9]\d{9}$').hasMatch(phone)) {
+      setState(() => _error = 'Enter a valid 10-digit phone number.');
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      final auth = ref.read(authControllerProvider);
-      await auth.login(_emailCtrl.text.trim(), _passwordCtrl.text);
-
-      const staffRoles = {
-        UserRole.admin,
-        UserRole.manager,
-        UserRole.warehouser,
-        UserRole.packaging,
-        UserRole.salesperson,
-      };
-
-      if (!staffRoles.contains(auth.role) && auth.role != UserRole.customer) {
-        _error = 'This account does not have staff access.';
-        await auth.logout();
-      }
-      // role == customer is fine — the router sends them to /pending-approval.
+      await ref
+          .read(authControllerProvider)
+          .signup(
+            name: _nameCtrl.text.trim(),
+            email: _emailCtrl.text.trim(),
+            password: _passwordCtrl.text,
+            phone: phone,
+          );
     } on ApiException catch (e) {
-      _error = e.message;
+      setState(() => _error = e.message);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -51,8 +67,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final denied =
-        GoRouterState.of(context).uri.queryParameters['denied'] == '1';
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardColor = isDark ? AppColors.charcoal : AppColors.parchment;
     final onCardColor = isDark ? AppColors.parchment : AppColors.cumin;
@@ -78,26 +92,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.asset(
-                      'assets/images/brand_logo_full.png',
-                      height: 150,
-                    ),
-                    const SizedBox(height: 20),
                     Text(
-                      'Mom Masale',
+                      'Join the Team',
                       style: textTheme.displayMedium?.copyWith(
                         color: AppColors.parchment,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'ERP',
+                      'Create your staff account',
                       style: textTheme.bodyMedium?.copyWith(
                         color: AppColors.parchment.withValues(alpha: 0.7),
-                        letterSpacing: 3,
+                        letterSpacing: 1,
                       ),
                     ),
-                    const SizedBox(height: 36),
+                    const SizedBox(height: 32),
                     Container(
                       padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
                       decoration: BoxDecoration(
@@ -114,43 +123,54 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(
-                            'Hello!',
-                            style: textTheme.titleLarge?.copyWith(
-                              color: onCardColor,
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            margin: const EdgeInsets.only(bottom: 18),
+                            decoration: BoxDecoration(
+                              color: AppColors.turmeric.withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Sign in to access your account.',
-                            style: textTheme.bodyMedium?.copyWith(
-                              color: onCardColor.withValues(alpha: 0.65),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          if (denied) ...[
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              margin: const EdgeInsets.only(bottom: 16),
-                              decoration: BoxDecoration(
-                                color: AppColors.paprika.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: AppColors.paprika.withValues(
-                                    alpha: 0.3,
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.info_outline,
+                                  size: 18,
+                                  color: AppColors.turmeric,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    "After you sign up, an admin needs to assign you a "
+                                    "role before you can get in.",
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      color: onCardColor.withValues(
+                                        alpha: 0.85,
+                                      ),
+                                    ),
                                   ),
                                 ),
+                              ],
+                            ),
+                          ),
+                          TextField(
+                            controller: _nameCtrl,
+                            textCapitalization: TextCapitalization.words,
+                            style: TextStyle(color: onCardColor),
+                            decoration: InputDecoration(
+                              labelText: 'Full name',
+                              filled: true,
+                              fillColor: fieldFillColor,
+                              labelStyle: TextStyle(
+                                color: onCardColor.withValues(alpha: 0.6),
                               ),
-                              child: const Text(
-                                "Your account doesn't have access to that page. "
-                                'Please sign in with an account that has the right role.',
-                                style: TextStyle(
-                                  color: AppColors.paprika,
-                                  fontSize: 13,
-                                ),
+                              prefixIcon: Icon(
+                                Icons.person_outline,
+                                color: onCardColor.withValues(alpha: 0.6),
                               ),
                             ),
-                          ],
+                          ),
+                          const SizedBox(height: 14),
                           TextField(
                             controller: _emailCtrl,
                             keyboardType: TextInputType.emailAddress,
@@ -170,10 +190,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           const SizedBox(height: 14),
                           TextField(
+                            controller: _phoneCtrl,
+                            keyboardType: TextInputType.phone,
+                            style: TextStyle(color: onCardColor),
+                            decoration: InputDecoration(
+                              labelText: 'Phone number',
+                              filled: true,
+                              fillColor: fieldFillColor,
+                              labelStyle: TextStyle(
+                                color: onCardColor.withValues(alpha: 0.6),
+                              ),
+                              prefixIcon: Icon(
+                                Icons.call_outlined,
+                                color: onCardColor.withValues(alpha: 0.6),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          TextField(
                             controller: _passwordCtrl,
                             obscureText: _obscure,
                             style: TextStyle(color: onCardColor),
-                            onSubmitted: (_) => _loading ? null : _login(),
+                            onSubmitted: (_) => _loading ? null : _submit(),
                             decoration: InputDecoration(
                               labelText: 'Password',
                               filled: true,
@@ -237,7 +275,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               backgroundColor: AppColors.maroon,
                               foregroundColor: AppColors.parchment,
                             ),
-                            onPressed: _loading ? null : _login,
+                            onPressed: _loading ? null : _submit,
                             child: _loading
                                 ? const SizedBox(
                                     height: 20,
@@ -247,24 +285,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       color: AppColors.parchment,
                                     ),
                                   )
-                                : const Text('Sign in'),
+                                : const Text('Create Account'),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'For staff use only',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: AppColors.parchment.withValues(alpha: 0.4),
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 20),
                     TextButton(
-                      onPressed: () => context.go('/signup'),
+                      onPressed: () => context.go('/login'),
                       child: Text(
-                        'New here? Create an account',
+                        'Already have an account? Sign in',
                         style: TextStyle(
                           color: AppColors.parchment.withValues(alpha: 0.85),
                         ),

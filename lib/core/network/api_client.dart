@@ -126,6 +126,36 @@ class ApiClient {
     }
   }
 
+  Future<AppUser> signup({
+    required String name,
+    required String email,
+    required String password,
+    required String phone,
+  }) async {
+    final res = await post('/api/auth/signup', {
+      'name': name,
+      'email': email,
+      'password': password,
+      'phone': phone,
+      'platform': platformName(),
+    });
+    return AppUser.fromJson(res.data['user']);
+  }
+
+  /// Returns true if a code was actually (re)sent, false if the account is
+  /// already verified or a code was requested too recently (server-side
+  /// cooldown) — callers use this to decide what message to show.
+  Future<bool> sendVerifyOtp() async {
+    final res = await post('/api/auth/send-verify-otp', {});
+    final alreadyVerified = res.data['alreadyVerified'] == true;
+    final cooldown = res.data['cooldown'] == true;
+    return !alreadyVerified && !cooldown;
+  }
+
+  Future<void> verifyEmail(String otp) {
+    return post('/api/auth/verify-email', {'otp': otp});
+  }
+
   /// Checks for an existing session on app launch (cookie already present)
   /// and returns the current user if valid, or null if not logged in.
   ///

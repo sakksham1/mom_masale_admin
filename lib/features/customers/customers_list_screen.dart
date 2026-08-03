@@ -8,6 +8,7 @@ import '../../core/network/api_exception.dart';
 import '../../core/utils/currency.dart';
 import '../../core/constants/layout_constants.dart';
 import '../../shared/widgets/status_badge.dart';
+import '../../core/theme/app_colors.dart';
 
 const _assignableRoles = [
   UserRole.customer,
@@ -164,6 +165,31 @@ class _CustomerTileState extends ConsumerState<_CustomerTile> {
             visualDensity: VisualDensity.compact,
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
+          Chip(
+            label: Text(
+              _roleLabel(c.role),
+              style: const TextStyle(fontSize: 11),
+            ),
+            visualDensity: VisualDensity.compact,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          if (c.isPendingAppSignup) ...[
+            const SizedBox(width: 6),
+            Chip(
+              avatar: const Icon(
+                Icons.hourglass_top_rounded,
+                size: 12,
+                color: AppColors.turmeric,
+              ),
+              label: const Text(
+                'Awaiting role',
+                style: TextStyle(fontSize: 11),
+              ),
+              backgroundColor: AppColors.turmeric.withValues(alpha: 0.14),
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ],
         ],
       ),
       subtitle: Text(c.phone != null ? '${c.email} · ${c.phone}' : c.email),

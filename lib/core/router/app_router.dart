@@ -21,21 +21,40 @@ import '../../features/sessions/sessions_screen.dart';
 import '../../features/reviews/reviews_screen.dart';
 import '../../features/analytics/analytics_screen.dart';
 import '../../features/requests/my_requests_screen.dart';
+import '../../features/onboarding/pending_approval_screen.dart';
+import '../../features/onboarding/verify_email_screen.dart';
+import '../auth/signup_screen.dart';
 
 GoRouter buildRouter(AuthController auth) {
   return GoRouter(
     refreshListenable: auth,
     initialLocation: '/dashboard',
     redirect: (context, state) {
-      if (auth.initializing) return null; // splash handles this state
+      if (auth.initializing) return null;
 
       final loggedIn = auth.isLoggedIn;
-      final loggingIn = state.matchedLocation == '/login';
-      if (!loggedIn && !loggingIn) {
-        return '/login';
+      final loc = state.matchedLocation;
+      final onAuthScreen = loc == '/login' || loc == '/signup';
+      final onVerify = loc == '/verify-email';
+      final onPending = loc == '/pending-approval';
+
+      if (!loggedIn) {
+        return onAuthScreen ? null : '/login';
       }
 
-      if (loggedIn && loggingIn) {
+      // Unverified email — hold here regardless of role, including admins,
+      // since verify-email.js is what flips emailVerified for anyone.
+      if (!auth.emailVerified) {
+        return onVerify ? null : '/verify-email';
+      }
+
+      // Verified but still role=customer — a fresh (or demoted) app account
+      // waiting for an admin to assign a role.
+      if (auth.role == UserRole.customer) {
+        return onPending ? null : '/pending-approval';
+      }
+
+      if (onAuthScreen || onVerify || onPending) {
         switch (auth.role) {
           case UserRole.packaging:
             return '/packaging';
@@ -48,13 +67,22 @@ GoRouter buildRouter(AuthController auth) {
         }
       }
 
-      if (loggedIn && !canAccessRoute(state.matchedLocation, auth.role)) {
+      if (!canAccessRoute(loc, auth.role)) {
         return '/login?denied=1';
       }
       return null;
     },
     routes: [
       GoRoute(path: '/login', builder: (c, s) => const LoginScreen()),
+      GoRoute(path: '/signup', builder: (c, s) => const SignupScreen()),
+      GoRoute(
+        path: '/verify-email',
+        builder: (c, s) => const VerifyEmailScreen(),
+      ),
+      GoRoute(
+        path: '/pending-approval',
+        builder: (c, s) => const PendingApprovalScreen(),
+      ),
       GoRoute(
         path: '/packaging/single',
         builder: (c, s) => const PackagingSubmitScreen(),

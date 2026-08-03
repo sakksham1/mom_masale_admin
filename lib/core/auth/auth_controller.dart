@@ -18,6 +18,7 @@ class AuthController extends ChangeNotifier {
   AppUser? get user => _user;
   bool get isLoggedIn => _user != null;
   UserRole get role => _user?.role ?? UserRole.unknown;
+  bool get emailVerified => _user?.emailVerified ?? false;
 
   bool _initializing = true;
   bool get initializing => _initializing;
@@ -45,6 +46,30 @@ class AuthController extends ChangeNotifier {
       unawaited(PushNotificationService.instance.init(_client));
     }
     notifyListeners();
+  }
+
+  Future<void> signup({
+    required String name,
+    required String email,
+    required String password,
+    required String phone,
+  }) async {
+    _user = await _client.signup(
+      name: name,
+      email: email,
+      password: password,
+      phone: phone,
+    );
+    notifyListeners();
+  }
+
+  Future<bool> sendVerifyOtp() => _client.sendVerifyOtp();
+
+  Future<void> verifyEmail(String otp) async {
+    await _client.verifyEmail(otp);
+    // verify-email.js only returns {ok:true} — refetch to pick up the
+    // updated emailVerified flag on _user.
+    await restoreSession();
   }
 
   Future<void> logout() async {

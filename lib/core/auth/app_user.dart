@@ -6,6 +6,7 @@ class AppUser {
   final String email;
   final String? phone;
   final UserRole role;
+  final bool emailVerified;
 
   const AppUser({
     required this.id,
@@ -13,6 +14,7 @@ class AppUser {
     required this.email,
     this.phone,
     required this.role,
+    this.emailVerified = false,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> j) => AppUser(
@@ -21,5 +23,6 @@ class AppUser {
     email: j['email'],
     phone: j['phone'],
     role: UserRole.fromString(j['role'] as String?),
+    emailVerified: j['emailVerified'] == true,
   );
 }

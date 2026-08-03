@@ -8,6 +8,7 @@ class Customer {
   final UserRole role;
   final String createdAt;
   final int orderCount, lifetimeSpend;
+  final String? signupPlatform; // NEW
 
   Customer({
     required this.id,
@@ -18,12 +19,18 @@ class Customer {
     required this.createdAt,
     required this.orderCount,
     required this.lifetimeSpend,
+    this.signupPlatform,
   });
 
-  /// Kept so existing UI code (the "Admin" chip in customers_list_screen.dart)
-  /// doesn't need to change — now derived from role instead of the retired
-  /// is_admin column.
   bool get isAdmin => role == UserRole.admin;
+
+  /// True for a role=customer account that signed up from the admin app —
+  /// i.e. a prospective staff member still waiting on a role.
+  bool get isPendingAppSignup =>
+      role == UserRole.customer &&
+      signupPlatform != null &&
+      signupPlatform != 'web' &&
+      signupPlatform != 'unknown';
 
   factory Customer.fromJson(Map<String, dynamic> j) => Customer(
     id: j['id'],
@@ -34,6 +41,7 @@ class Customer {
     createdAt: j['created_at'],
     orderCount: j['order_count'] ?? 0,
     lifetimeSpend: j['lifetime_spend'] ?? 0,
+    signupPlatform: j['signup_platform'],
   );
 }
 
