@@ -20,6 +20,7 @@ import '../../features/catalog/catalog_list_screen.dart';
 import '../../features/sessions/sessions_screen.dart';
 import '../../features/reviews/reviews_screen.dart';
 import '../../features/analytics/analytics_screen.dart';
+import '../../features/requests/my_requests_screen.dart';
 
 GoRouter buildRouter(AuthController auth) {
   return GoRouter(
@@ -97,6 +98,10 @@ GoRouter buildRouter(AuthController auth) {
             builder: (c, s) => const DbExplorerScreen(),
           ),
           GoRoute(path: '/sessions', builder: (c, s) => const SessionsScreen()),
+          GoRoute(
+            path: '/my-requests',
+            builder: (c, s) => const MyRequestsScreen(),
+          ),
         ],
       ),
     ],

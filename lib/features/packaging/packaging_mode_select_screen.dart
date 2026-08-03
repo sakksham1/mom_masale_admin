@@ -17,6 +17,11 @@ class PackagingModeSelectScreen extends StatelessWidget {
             icon: const Icon(Icons.history),
             onPressed: () => context.push('/packaging/history'),
           ),
+          IconButton(
+            icon: const Icon(Icons.list_alt_outlined),
+            tooltip: 'My Requests',
+            onPressed: () => context.push('/my-requests'),
+          ),
         ],
       ),
       body: Padding(

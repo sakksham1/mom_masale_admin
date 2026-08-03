@@ -5,6 +5,7 @@ import '../../core/auth/user_role.dart';
 import '../../core/network/api_client_provider.dart';
 import '../products/products_list_screen.dart';
 import '../warehouse/warehouse_screen.dart';
+import '../requests/my_requests_screen.dart';
 
 /// Inventory screen — two tabs: Products (finished goods) and Raw Materials.
 /// Visible (view-only) to packaging, manager, and admin — who approve
@@ -35,6 +36,16 @@ class _StockScreenState extends ConsumerState<StockScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Inventory'),
+        actions: [
+          if (canManage)
+            IconButton(
+              icon: const Icon(Icons.list_alt_outlined),
+              tooltip: 'My Requests',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const MyRequestsScreen()),
+              ),
+            ),
+        ],
         bottom: TabBar(
           controller: _controller,
           tabs: const [

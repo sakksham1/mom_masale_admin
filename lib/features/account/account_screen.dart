@@ -214,6 +214,8 @@ String _routeLabel(String path) {
       return 'My Sessions';
     case '/analytics':
       return 'Analytics';
+    case '/my-requests':
+      return 'My Requests';
     default:
       return path;
   }
