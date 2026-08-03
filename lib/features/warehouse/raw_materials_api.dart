@@ -75,7 +75,7 @@ class RawMaterialsApi {
         .toList();
   }
 
-  /// warehouser or packaging.
+  /// warehouser only
   Future<void> createRawMaterial({
     required String name,
     required String unit,
@@ -90,7 +90,7 @@ class RawMaterialsApi {
     });
   }
 
-  /// warehouser or packaging. Doesn't change qty immediately — files a
+  /// warehouser only. Doesn't change qty immediately — files a
   /// pending raw_material_transactions row that a manager/admin approves.
   /// [amount] is signed, expressed in [unit] (which may be the material's
   /// base unit or its everyday sub-unit, e.g. 'g' for a 'kg' material).

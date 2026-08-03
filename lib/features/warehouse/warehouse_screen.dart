@@ -34,9 +34,8 @@ class _WarehouseTabState extends ConsumerState<WarehouseTab> {
   Widget build(BuildContext context) {
     final materialsAsync = ref.watch(rawMaterialsProvider);
     final role = ref.watch(authControllerProvider).role;
-    // Packaging can now manage raw materials the same as warehouser — they're
-    // often the ones physically pulling stock and best placed to log usage.
-    final canManage = role == UserRole.warehouser || role == UserRole.packaging;
+    // Only warehouser can manage raw materials — packaging is view-only.
+    final canManage = role == UserRole.warehouser;
 
     return Stack(
       children: [
