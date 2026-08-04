@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'my_requests_api.dart';
 import 'my_requests_provider.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/constants/layout_constants.dart';
 import '../../core/utils/haptics.dart';
-import '../warehouse/raw_materials_api.dart' show formatQty;
 
 class MyRequestsScreen extends ConsumerWidget {
   const MyRequestsScreen({super.key});

@@ -36,7 +36,10 @@ class OrdersTab extends ConsumerWidget {
                 subtitle: Text('${o.status} · ${o.paymentStatus}'),
                 trailing: Text('₹${o.total}'),
                 onTap: () async {
-                  await Navigator.of(context).push(
+                  // Root navigator: same convention as catalog/customer detail
+                  // screens — this clears HomeShell's floating nav bar
+                  // entirely instead of it overlapping the bottom buttons.
+                  await Navigator.of(context, rootNavigator: true).push(
                     MaterialPageRoute(
                       builder: (_) =>
                           OrderDetailScreen(order: o, editable: editable),

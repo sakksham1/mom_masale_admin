@@ -2,43 +2,77 @@ import '../../core/network/api_client.dart';
 
 class Order {
   final int id;
-  final String customerName, phone, status, paymentStatus, createdAt;
-  final int total;
+  final int? userId;
+  final String customerName, phone, status, paymentStatus, createdAt, updatedAt;
+  final String? email,
+      address,
+      city,
+      pincode,
+      razorpayOrderId,
+      razorpayPaymentId;
+  final int subtotal, shippingFee, total;
   final List<OrderItem> items;
 
   Order({
     required this.id,
+    this.userId,
     required this.customerName,
     required this.phone,
+    this.email,
+    this.address,
+    this.city,
+    this.pincode,
     required this.status,
     required this.paymentStatus,
     required this.createdAt,
+    required this.updatedAt,
+    required this.subtotal,
+    required this.shippingFee,
     required this.total,
+    this.razorpayOrderId,
+    this.razorpayPaymentId,
     required this.items,
   });
 
+  /// True when this order has no linked account (checkout without login is
+  /// not currently possible per checkout.js, which requires a session, but
+  /// user_id can still be legitimately absent for older/edge-case rows).
+  bool get isGuest => userId == null;
+
   factory Order.fromJson(Map<String, dynamic> j) => Order(
     id: j['id'],
+    userId: j['user_id'],
     customerName: j['customer_name'],
     phone: j['phone'],
+    email: j['email'],
+    address: j['address'],
+    city: j['city'],
+    pincode: j['pincode'],
     status: j['status'],
     paymentStatus: j['payment_status'],
-    createdAt: j['created_at'],
+    createdAt: j['created_at'] ?? '',
+    updatedAt: j['updated_at'] ?? '',
+    subtotal: j['subtotal'] ?? 0,
+    shippingFee: j['shipping_fee'] ?? 0,
     total: j['total'],
+    razorpayOrderId: j['razorpay_order_id'],
+    razorpayPaymentId: j['razorpay_payment_id'],
     items: (j['items'] as List).map((i) => OrderItem.fromJson(i)).toList(),
   );
 }
 
 class OrderItem {
-  final String productName, size;
+  final String productSlug, productName, size;
   final int qty, unitPrice;
   OrderItem({
+    required this.productSlug,
     required this.productName,
     required this.size,
     required this.qty,
     required this.unitPrice,
   });
   factory OrderItem.fromJson(Map<String, dynamic> j) => OrderItem(
+    productSlug: j['product_slug'] ?? '',
     productName: j['product_name'],
     size: j['size'],
     qty: j['qty'],

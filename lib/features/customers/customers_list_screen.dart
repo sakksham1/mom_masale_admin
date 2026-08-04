@@ -3,49 +3,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'customers_api.dart';
 import 'customers_provider.dart';
+import 'customer_detail_screen.dart';
+import 'role_display.dart';
 import '../../core/auth/user_role.dart';
-import '../../core/network/api_exception.dart';
-import '../../core/utils/currency.dart';
 import '../../core/constants/layout_constants.dart';
-import '../../shared/widgets/status_badge.dart';
 import '../../core/theme/app_colors.dart';
+import '../../shared/widgets/status_badge.dart';
+import '../../shared/widgets/tap_scale.dart';
+import '../../shared/widgets/staggered_fade_in.dart';
 
-const _assignableRoles = [
-  UserRole.customer,
-  UserRole.salesperson,
-  UserRole.packaging,
-  UserRole.warehouser,
-  UserRole.manager,
-  UserRole.admin,
-];
+enum _SortMode { newest, oldest, nameAz, mostOrders, highestSpend }
 
-String _roleLabel(UserRole role) {
-  switch (role) {
-    case UserRole.admin:
-      return 'Admin';
-    case UserRole.manager:
-      return 'Manager';
-    case UserRole.warehouser:
-      return 'Warehouser';
-    case UserRole.packaging:
-      return 'Packaging';
-    case UserRole.salesperson:
-      return 'Salesperson';
-    case UserRole.customer:
-      return 'Customer';
-    case UserRole.unknown:
-      return 'Unknown';
-  }
-}
-
-class CustomersTab extends ConsumerWidget {
-  /// Whether the role-change menu is shown. The backend (roles.js) is
-  /// admin-only regardless, so this is a UI convenience, not the real gate.
+/// Simplified, tappable account list. Each row shows only role + name +
+/// email — everything else (contact, account, activity, role assignment)
+/// lives on CustomerDetailScreen, reached by tapping a row.
+class CustomersTab extends ConsumerStatefulWidget {
+  /// Whether role assignment is available on the detail screen. The
+  /// backend (roles.js) is admin-only regardless — this is a UI gate.
   final bool editable;
 
-  /// If set, only users whose role is in this set are shown. Lets one
-  /// provider/endpoint (which returns every user) power both a
-  /// "Customers" view and a "Staff" view.
+  /// If set, only accounts whose role is in this set are shown.
   final Set<UserRole>? roleFilter;
 
   final String emptyMessage;
@@ -58,180 +35,283 @@ class CustomersTab extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final customersAsync = ref.watch(customersProvider);
-
-    return RefreshIndicator(
-      onRefresh: () async => ref.invalidate(customersProvider),
-      child: customersAsync.when(
-        data: (customers) {
-          final filtered = roleFilter == null
-              ? customers
-              : customers.where((c) => roleFilter!.contains(c.role)).toList();
-
-          if (filtered.isEmpty) {
-            return ListView(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 48),
-                  child: Center(child: Text(emptyMessage)),
-                ),
-              ],
-            );
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.only(
-              bottom: LayoutConstants.navBarClearance,
-            ),
-            itemCount: filtered.length,
-            separatorBuilder: (_, _) => const Divider(height: 1),
-            itemBuilder: (context, i) =>
-                _CustomerTile(customer: filtered[i], editable: editable),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Could not load: $e')),
-      ),
-    );
-  }
+  ConsumerState<CustomersTab> createState() => _CustomersTabState();
 }
 
-class _CustomerTile extends ConsumerStatefulWidget {
-  final Customer customer;
-  final bool editable;
-  const _CustomerTile({required this.customer, required this.editable});
+class _CustomersTabState extends ConsumerState<CustomersTab> {
+  final _searchCtrl = TextEditingController();
+  String _query = '';
+  _SortMode _sort = _SortMode.newest;
 
   @override
-  ConsumerState<_CustomerTile> createState() => _CustomerTileState();
-}
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
-class _CustomerTileState extends ConsumerState<_CustomerTile> {
-  bool _busy = false;
+  List<Customer> _process(List<Customer> customers) {
+    var list = widget.roleFilter == null
+        ? customers
+        : customers.where((c) => widget.roleFilter!.contains(c.role)).toList();
 
-  Future<void> _changeRole(UserRole newRole) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Change role?'),
-        content: Text(
-          'Set ${widget.customer.name} to "${_roleLabel(newRole)}"? '
-          'This takes effect on their next request.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-
-    setState(() => _busy = true);
-    try {
-      await ref
-          .read(customersApiProvider)
-          .updateRole(widget.customer.id, newRole.name);
-      ref.invalidate(customersProvider);
-    } on ApiException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
+    if (_query.isNotEmpty) {
+      final q = _query.toLowerCase();
+      list = list
+          .where(
+            (c) =>
+                c.name.toLowerCase().contains(q) ||
+                c.email.toLowerCase().contains(q) ||
+                (c.phone ?? '').contains(q),
+          )
+          .toList();
     }
+
+    list = List.of(list);
+    switch (_sort) {
+      case _SortMode.newest:
+        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+      case _SortMode.oldest:
+        list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        break;
+      case _SortMode.nameAz:
+        list.sort(
+          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+        );
+        break;
+      case _SortMode.mostOrders:
+        list.sort((a, b) => b.orderCount.compareTo(a.orderCount));
+        break;
+      case _SortMode.highestSpend:
+        list.sort((a, b) => b.lifetimeSpend.compareTo(a.lifetimeSpend));
+        break;
+    }
+    return list;
   }
 
   @override
   Widget build(BuildContext context) {
-    final c = widget.customer;
-    return ListTile(
-      leading: RoleAvatar(role: c.role),
-      title: Row(
-        children: [
-          Flexible(child: Text(c.name, overflow: TextOverflow.ellipsis)),
-          const SizedBox(width: 6),
-          Chip(
-            label: Text(
-              _roleLabel(c.role),
-              style: const TextStyle(fontSize: 11),
+    final customersAsync = ref.watch(customersProvider);
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: TextField(
+            controller: _searchCtrl,
+            onChanged: (v) => setState(() => _query = v),
+            decoration: InputDecoration(
+              hintText: 'Search name, email, or phone…',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _query.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () => setState(() {
+                        _searchCtrl.clear();
+                        _query = '';
+                      }),
+                    ),
             ),
-            visualDensity: VisualDensity.compact,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
-          Chip(
-            label: Text(
-              _roleLabel(c.role),
-              style: const TextStyle(fontSize: 11),
-            ),
-            visualDensity: VisualDensity.compact,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          if (c.isPendingAppSignup) ...[
-            const SizedBox(width: 6),
-            Chip(
-              avatar: const Icon(
-                Icons.hourglass_top_rounded,
-                size: 12,
-                color: AppColors.turmeric,
-              ),
-              label: const Text(
-                'Awaiting role',
-                style: TextStyle(fontSize: 11),
-              ),
-              backgroundColor: AppColors.turmeric.withValues(alpha: 0.14),
-              visualDensity: VisualDensity.compact,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-          ],
-        ],
-      ),
-      subtitle: Text(c.phone != null ? '${c.email} · ${c.phone}' : c.email),
-      trailing: _busy
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : Row(
-              mainAxisSize: MainAxisSize.min,
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: SizedBox(
+            height: 34,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
               children: [
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      formatRupees(c.lifetimeSpend),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      '${c.orderCount} order${c.orderCount == 1 ? '' : 's'}',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
+                _SortChip(
+                  label: 'Newest',
+                  selected: _sort == _SortMode.newest,
+                  onTap: () => setState(() => _sort = _SortMode.newest),
                 ),
-                if (widget.editable)
-                  PopupMenuButton<UserRole>(
-                    icon: const Icon(Icons.more_vert),
-                    onSelected: _changeRole,
-                    itemBuilder: (context) => _assignableRoles
-                        .where((r) => r != c.role)
-                        .map(
-                          (r) => PopupMenuItem(
-                            value: r,
-                            child: Text('Set as ${_roleLabel(r)}'),
-                          ),
-                        )
-                        .toList(),
-                  ),
+                const SizedBox(width: 8),
+                _SortChip(
+                  label: 'Oldest',
+                  selected: _sort == _SortMode.oldest,
+                  onTap: () => setState(() => _sort = _SortMode.oldest),
+                ),
+                const SizedBox(width: 8),
+                _SortChip(
+                  label: 'Name A–Z',
+                  selected: _sort == _SortMode.nameAz,
+                  onTap: () => setState(() => _sort = _SortMode.nameAz),
+                ),
+                const SizedBox(width: 8),
+                _SortChip(
+                  label: 'Most Orders',
+                  selected: _sort == _SortMode.mostOrders,
+                  onTap: () => setState(() => _sort = _SortMode.mostOrders),
+                ),
+                const SizedBox(width: 8),
+                _SortChip(
+                  label: 'Highest Spend',
+                  selected: _sort == _SortMode.highestSpend,
+                  onTap: () => setState(() => _sort = _SortMode.highestSpend),
+                ),
               ],
             ),
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () async => ref.invalidate(customersProvider),
+            child: customersAsync.when(
+              data: (customers) {
+                final list = _process(customers);
+                if (list.isEmpty) {
+                  return ListView(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 64),
+                        child: Center(
+                          child: Text(
+                            customers.isEmpty
+                                ? widget.emptyMessage
+                                : 'No accounts match "$_query".',
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                return ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(
+                    12,
+                    8,
+                    12,
+                    LayoutConstants.navBarClearance,
+                  ),
+                  itemCount: list.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (context, i) => StaggeredFadeIn(
+                    key: ValueKey('cust_fade_${list[i].id}'),
+                    index: i,
+                    child: _CustomerTile(
+                      key: ValueKey('cust_${list[i].id}'),
+                      customer: list[i],
+                      canEdit: widget.editable,
+                    ),
+                  ),
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Could not load: $e')),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SortChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _SortChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => onTap(),
+      selectedColor: AppColors.maroon,
+      labelStyle: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: selected ? AppColors.parchment : null,
+      ),
+    );
+  }
+}
+
+class _CustomerTile extends StatelessWidget {
+  final Customer customer;
+  final bool canEdit;
+  const _CustomerTile({
+    super.key,
+    required this.customer,
+    required this.canEdit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final color = roleColor(customer.role);
+
+    return TapScale(
+      scaleDown: 0.985,
+      onTap: () => Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(
+          builder: (_) =>
+              CustomerDetailScreen(customer: customer, canEdit: canEdit),
+        ),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: scheme.outlineVariant.withValues(alpha: 0.5),
+          ),
+        ),
+        child: Row(
+          children: [
+            RoleAvatar(role: customer.role),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    customer.name,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    customer.email,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                roleLabel(customer.role),
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(Icons.chevron_right, color: scheme.onSurfaceVariant, size: 20),
+          ],
+        ),
+      ),
     );
   }
 }

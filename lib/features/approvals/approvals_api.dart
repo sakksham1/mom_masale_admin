@@ -101,8 +101,9 @@ class PendingProductCore {
 String describeCatalogUpdates(Map<String, dynamic> updates) {
   final parts = <String>[];
   if (updates['name'] != null) parts.add('Name → "${updates['name']}"');
-  if (updates['category'] != null)
+  if (updates['category'] != null) {
     parts.add('Category → ${updates['category']}');
+  }
   if (updates['image'] != null) parts.add('Image updated');
   final prices = updates['prices'];
   if (prices is Map) {
