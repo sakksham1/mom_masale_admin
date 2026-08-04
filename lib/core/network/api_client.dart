@@ -57,6 +57,11 @@ class ApiClient {
         return const ForbiddenException();
       case 404:
         return const NotFoundException();
+      case 409:
+        return ConflictException(
+          _serverMessage(e) ??
+              'This conflicts with something already in progress.',
+        );
       case 422:
         final data = e.response?.data;
         if (data is Map && data['errors'] is Map) {
@@ -69,10 +74,18 @@ class ApiClient {
       case 500:
       case 502:
       case 503:
-        return const ServerException();
+        return ServerException(
+          _serverMessage(e) ?? 'Something went wrong on our end.',
+        );
       default:
         return const UnknownApiException();
     }
+  }
+
+  String? _serverMessage(DioException e) {
+    final data = e.response?.data;
+    if (data is Map && data['error'] is String) return data['error'] as String;
+    return null;
   }
 
   Future<T> _run<T>(Future<T> Function() call) async {

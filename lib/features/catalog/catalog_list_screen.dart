@@ -14,14 +14,29 @@ import '../../shared/widgets/staggered_fade_in.dart';
 /// submit changes that wait for admin approval — the edit screen itself
 /// decides which, based on role. Deliberately has no stock/quantity fields
 /// anywhere — inventory stays in the Stock tab.
-class CatalogScreen extends ConsumerStatefulWidget {
+/// Thin standalone wrapper for the /catalog route — CatalogView is what
+/// gets embedded as a tab inside SiteScreen (same split DbExplorerScreen
+/// already does for /db-explorer).
+class CatalogScreen extends StatelessWidget {
   const CatalogScreen({super.key});
 
   @override
-  ConsumerState<CatalogScreen> createState() => _CatalogScreenState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Product Catalog')),
+      body: const CatalogView(),
+    );
+  }
 }
 
-class _CatalogScreenState extends ConsumerState<CatalogScreen> {
+class CatalogView extends ConsumerStatefulWidget {
+  const CatalogView({super.key});
+
+  @override
+  ConsumerState<CatalogView> createState() => _CatalogViewState();
+}
+
+class _CatalogViewState extends ConsumerState<CatalogView> {
   final _searchCtrl = TextEditingController();
   String _query = '';
 
@@ -35,93 +50,90 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
   Widget build(BuildContext context) {
     final productsAsync = ref.watch(catalogProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Product Catalog')),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: TextField(
-              controller: _searchCtrl,
-              onChanged: (v) => setState(() => _query = v),
-              decoration: InputDecoration(
-                hintText: 'Search products…',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _query.isEmpty
-                    ? null
-                    : IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () => setState(() {
-                          _searchCtrl.clear();
-                          _query = '';
-                        }),
-                      ),
-              ),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: TextField(
+            controller: _searchCtrl,
+            onChanged: (v) => setState(() => _query = v),
+            decoration: InputDecoration(
+              hintText: 'Search products…',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _query.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () => setState(() {
+                        _searchCtrl.clear();
+                        _query = '';
+                      }),
+                    ),
             ),
           ),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async => ref.invalidate(catalogProvider),
-              child: productsAsync.when(
-                data: (products) {
-                  final filtered = _query.isEmpty
-                      ? products
-                      : products
-                            .where(
-                              (p) =>
-                                  p.name.toLowerCase().contains(
-                                    _query.toLowerCase(),
-                                  ) ||
-                                  p.category.toLowerCase().contains(
-                                    _query.toLowerCase(),
-                                  ),
-                            )
-                            .toList();
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () async => ref.invalidate(catalogProvider),
+            child: productsAsync.when(
+              data: (products) {
+                final filtered = _query.isEmpty
+                    ? products
+                    : products
+                          .where(
+                            (p) =>
+                                p.name.toLowerCase().contains(
+                                  _query.toLowerCase(),
+                                ) ||
+                                p.category.toLowerCase().contains(
+                                  _query.toLowerCase(),
+                                ),
+                          )
+                          .toList();
 
-                  if (filtered.isEmpty) {
-                    return ListView(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 64),
-                          child: Center(
-                            child: Text(
-                              products.isEmpty
-                                  ? 'No products yet.'
-                                  : 'No products match "$_query".',
-                            ),
+                if (filtered.isEmpty) {
+                  return ListView(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 64),
+                        child: Center(
+                          child: Text(
+                            products.isEmpty
+                                ? 'No products yet.'
+                                : 'No products match "$_query".',
                           ),
                         ),
-                      ],
-                    );
-                  }
-
-                  return ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(
-                      12,
-                      4,
-                      12,
-                      LayoutConstants.navBarClearance,
-                    ),
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
-                    itemBuilder: (context, i) => StaggeredFadeIn(
-                      key: ValueKey('cat_fade_${filtered[i].id}'),
-                      index: i,
-                      child: _CatalogTile(
-                        key: ValueKey('cat_${filtered[i].id}'),
-                        product: filtered[i],
                       ),
-                    ),
+                    ],
                   );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) =>
-                    Center(child: Text('Could not load catalog: $e')),
-              ),
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(
+                    12,
+                    4,
+                    12,
+                    LayoutConstants.navBarClearance,
+                  ),
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (context, i) => StaggeredFadeIn(
+                    key: ValueKey('cat_fade_${filtered[i].id}'),
+                    index: i,
+                    child: _CatalogTile(
+                      key: ValueKey('cat_${filtered[i].id}'),
+                      product: filtered[i],
+                    ),
+                  ),
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) =>
+                  Center(child: Text('Could not load catalog: $e')),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

@@ -197,6 +197,46 @@ class ApprovalsQueue {
   );
 }
 
+class BatchDecisionResult {
+  final int id;
+  final String type;
+  final bool ok;
+  final String? error;
+  BatchDecisionResult({
+    required this.id,
+    required this.type,
+    required this.ok,
+    this.error,
+  });
+
+  factory BatchDecisionResult.fromJson(Map<String, dynamic> j) =>
+      BatchDecisionResult(
+        id: j['id'],
+        type: j['type'],
+        ok: j['ok'] == true,
+        error: j['error'],
+      );
+}
+
+class BatchDecisionResponse {
+  final List<BatchDecisionResult> results;
+  final int succeeded, failed;
+  BatchDecisionResponse({
+    required this.results,
+    required this.succeeded,
+    required this.failed,
+  });
+
+  factory BatchDecisionResponse.fromJson(Map<String, dynamic> j) =>
+      BatchDecisionResponse(
+        results: (j['results'] as List)
+            .map((r) => BatchDecisionResult.fromJson(r))
+            .toList(),
+        succeeded: j['succeeded'] ?? 0,
+        failed: j['failed'] ?? 0,
+      );
+}
+
 class ApprovalsApi {
   final ApiClient client;
   ApprovalsApi(this.client);
@@ -221,5 +261,19 @@ class ApprovalsApi {
       'id': id,
       'decision': decision,
     });
+  }
+
+  /// Batch version of decide — max 100 items per call, enforced server-side.
+  /// A manager including a product_core item gets that one item back as
+  /// ok:false rather than the whole batch failing.
+  Future<BatchDecisionResponse> decideBatch(
+    List<({String type, int id, String decision})> items,
+  ) async {
+    final res = await client.post('/api/manager/approvals/decide-batch', {
+      'items': items
+          .map((i) => {'type': i.type, 'id': i.id, 'decision': i.decision})
+          .toList(),
+    });
+    return BatchDecisionResponse.fromJson(res.data);
   }
 }

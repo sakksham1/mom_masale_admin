@@ -54,14 +54,26 @@ String _formatCount(int n) =>
 
 // ── Screen shell ────────────────────────────────────────────────────────────
 
-class AnalyticsScreen extends ConsumerStatefulWidget {
+class AnalyticsScreen extends StatelessWidget {
   const AnalyticsScreen({super.key});
 
   @override
-  ConsumerState<AnalyticsScreen> createState() => _AnalyticsScreenState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Analytics')),
+      body: const AnalyticsView(),
+    );
+  }
 }
 
-class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
+class AnalyticsView extends ConsumerStatefulWidget {
+  const AnalyticsView({super.key});
+
+  @override
+  ConsumerState<AnalyticsView> createState() => _AnalyticsViewState();
+}
+
+class _AnalyticsViewState extends ConsumerState<AnalyticsView>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController = TabController(
     length: 6,
@@ -82,47 +94,45 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Analytics'),
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          tabs: const [
-            Tab(text: 'Overview'),
-            Tab(text: 'Checkout Funnel'),
-            Tab(text: 'Searches'),
-            Tab(text: 'Filters'),
-            Tab(text: 'Coming Soon'),
-            Tab(text: 'Recipes'),
-          ],
+    return Column(
+      children: [
+        Material(
+          color: Theme.of(context).colorScheme.surface,
+          child: TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            tabs: const [
+              Tab(text: 'Overview'),
+              Tab(text: 'Checkout Funnel'),
+              Tab(text: 'Searches'),
+              Tab(text: 'Filters'),
+              Tab(text: 'Coming Soon'),
+              Tab(text: 'Recipes'),
+            ],
+          ),
         ),
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-            child: _DaysSelector(
-              selected: _days,
-              onChanged: (d) => setState(() => _days = d),
-            ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+          child: _DaysSelector(
+            selected: _days,
+            onChanged: (d) => setState(() => _days = d),
           ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _OverviewTab(days: _days, onNavigate: _goToTab),
-                _FunnelTab(days: _days),
-                _SearchTermsTab(days: _days),
-                _FiltersTab(days: _days),
-                _ComingSoonTab(days: _days),
-                _RecipesTab(days: _days),
-              ],
-            ),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _OverviewTab(days: _days, onNavigate: _goToTab),
+              _FunnelTab(days: _days),
+              _SearchTermsTab(days: _days),
+              _FiltersTab(days: _days),
+              _ComingSoonTab(days: _days),
+              _RecipesTab(days: _days),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

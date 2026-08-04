@@ -27,14 +27,28 @@ String? _resolveImageUrl(String path) {
   return '${Env.apiBaseUrl}$normalized';
 }
 
-class ReviewsScreen extends ConsumerStatefulWidget {
+class ReviewsScreen extends StatelessWidget {
   const ReviewsScreen({super.key});
 
   @override
-  ConsumerState<ReviewsScreen> createState() => _ReviewsScreenState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Reviews')),
+      body: const ReviewsView(),
+    );
+  }
 }
 
-class _ReviewsScreenState extends ConsumerState<ReviewsScreen>
+/// Embeddable content (no Scaffold/AppBar) so this can live inside
+/// SiteScreen's TabBarView as well as the standalone /reviews route.
+class ReviewsView extends ConsumerStatefulWidget {
+  const ReviewsView({super.key});
+
+  @override
+  ConsumerState<ReviewsView> createState() => _ReviewsViewState();
+}
+
+class _ReviewsViewState extends ConsumerState<ReviewsView>
     with SingleTickerProviderStateMixin {
   late final TabController _controller = TabController(length: 2, vsync: this);
 
@@ -52,24 +66,30 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen>
       orElse: () => 0,
     );
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Reviews'),
-        bottom: TabBar(
-          controller: _controller,
-          tabs: [
-            Tab(text: pendingCount > 0 ? 'Pending ($pendingCount)' : 'Pending'),
-            const Tab(text: 'Approved'),
-          ],
+    return Column(
+      children: [
+        Material(
+          color: Theme.of(context).colorScheme.surface,
+          child: TabBar(
+            controller: _controller,
+            tabs: [
+              Tab(
+                text: pendingCount > 0 ? 'Pending ($pendingCount)' : 'Pending',
+              ),
+              const Tab(text: 'Approved'),
+            ],
+          ),
         ),
-      ),
-      body: TabBarView(
-        controller: _controller,
-        children: const [
-          _ReviewsList(status: 'pending'),
-          _ReviewsList(status: 'approved'),
-        ],
-      ),
+        Expanded(
+          child: TabBarView(
+            controller: _controller,
+            children: const [
+              _ReviewsList(status: 'pending'),
+              _ReviewsList(status: 'approved'),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

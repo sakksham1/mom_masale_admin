@@ -6,11 +6,15 @@ sealed class ApiException implements Exception {
 }
 
 class UnauthorizedException extends ApiException {
-  const UnauthorizedException([super.message = 'Session expired. Please log in again.']);
+  const UnauthorizedException([
+    super.message = 'Session expired. Please log in again.',
+  ]);
 }
 
 class ForbiddenException extends ApiException {
-  const ForbiddenException([super.message = 'You don\'t have access to do that.']);
+  const ForbiddenException([
+    super.message = 'You don\'t have access to do that.',
+  ]);
 }
 
 class NotFoundException extends ApiException {
@@ -19,11 +23,16 @@ class NotFoundException extends ApiException {
 
 class ValidationException extends ApiException {
   final Map<String, List<String>> fieldErrors;
-  const ValidationException(this.fieldErrors, [super.message = 'Please check the form and try again.']);
+  const ValidationException(
+    this.fieldErrors, [
+    super.message = 'Please check the form and try again.',
+  ]);
 }
 
 class NetworkException extends ApiException {
-  const NetworkException([super.message = 'Could not reach the server. Check your connection.']);
+  const NetworkException([
+    super.message = 'Could not reach the server. Check your connection.',
+  ]);
 }
 
 class ServerException extends ApiException {
@@ -32,4 +41,10 @@ class ServerException extends ApiException {
 
 class UnknownApiException extends ApiException {
   const UnknownApiException([super.message = 'Unexpected error.']);
+}
+
+class ConflictException extends ApiException {
+  const ConflictException([
+    super.message = 'This conflicts with something already in progress.',
+  ]);
 }

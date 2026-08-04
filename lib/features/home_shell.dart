@@ -10,6 +10,7 @@ import '../core/network/api_client_provider.dart';
 import '../core/constants/layout_constants.dart';
 import '../features/approvals/approvals_provider.dart';
 import '../features/reviews/reviews_provider.dart';
+import '../features/publish_queue/publish_queue_provider.dart';
 import '../shared/widgets/app_banner.dart';
 import '../shared/widgets/nav_more_sheet.dart';
 
@@ -37,24 +38,11 @@ const _allNavItems = [
     Icons.inventory_2,
     'Inventory',
   ),
-  _NavItem('/catalog', Icons.category_outlined, Icons.category, 'Catalog'),
-  _NavItem(
-    '/reviews',
-    Icons.rate_review_outlined,
-    Icons.rate_review,
-    'Reviews',
-  ),
   _NavItem(
     '/approvals',
     Icons.fact_check_outlined,
     Icons.fact_check,
     'Approvals',
-  ),
-  _NavItem(
-    '/analytics',
-    Icons.query_stats_outlined,
-    Icons.query_stats,
-    'Analytics',
   ),
   _NavItem(
     '/sales',
@@ -70,14 +58,39 @@ const _allNavItems = [
   ),
 ];
 
+/// The "Site" popup's contents — Catalog / Reviews / Publish Queue /
+/// Analytics. Not part of _allNavItems since these never render as direct
+/// tabs; they only ever appear inside the Site popup. Filtered per-role via
+/// canAccessRoute same as everything else (publish-queue is admin-only, so
+/// a manager simply never sees that entry).
+const _siteNavItems = [
+  _NavItem('/catalog', Icons.category_outlined, Icons.category, 'Catalog'),
+  _NavItem(
+    '/reviews',
+    Icons.rate_review_outlined,
+    Icons.rate_review,
+    'Reviews',
+  ),
+  _NavItem(
+    '/publish-queue',
+    Icons.publish_outlined,
+    Icons.publish,
+    'Publish Queue',
+  ),
+  _NavItem(
+    '/analytics',
+    Icons.query_stats_outlined,
+    Icons.query_stats,
+    'Analytics',
+  ),
+];
+
 /// Roles whose tab count is congested enough to warrant folding a few
 /// sections behind a "More" popup instead of showing every icon directly.
-/// Admin is the only one today (Overview/Business/Inventory/Catalog/Reviews/
-/// Approvals + Me = 7 targets); add more roles here once they need it too.
 const _moreGroupedRoles = {UserRole.admin, UserRole.manager};
 
 /// Paths folded behind the "More" popup for roles in [_moreGroupedRoles].
-const _groupedPaths = {'/business', '/stock', '/catalog', '/reviews'};
+const _groupedPaths = {'/business', '/stock', '/approvals'};
 
 sealed class _NavSlot {
   const _NavSlot();
@@ -88,36 +101,79 @@ class _SingleSlot extends _NavSlot {
   const _SingleSlot(this.item);
 }
 
-class _MoreSlot extends _NavSlot {
+/// A popup slot — tapping it opens NavMoreSheet with [items] instead of
+/// navigating directly. Used for both "More" (business/stock/approvals)
+/// and "Site" (catalog/reviews/publish-queue/analytics).
+class _PopupSlot extends _NavSlot {
+  final String key;
+  final String label;
+  final IconData icon, selectedIcon;
   final List<_NavItem> items;
-  const _MoreSlot(this.items);
+  const _PopupSlot({
+    required this.key,
+    required this.label,
+    required this.icon,
+    required this.selectedIcon,
+    required this.items,
+  });
 }
 
 /// Turns the role's accessible tabs into render slots — either a direct
 /// icon, or (for grouped roles, when there are enough grouped tabs to be
-/// worth folding) a single "More" slot standing in for several of them,
-/// inserted where the first grouped tab would have been.
+/// worth folding) a single "More" popup slot standing in for several of
+/// them, inserted where the first grouped tab would have been. A "Site"
+/// popup slot is appended after, if the role can access any site item.
 List<_NavSlot> _buildSlots(List<_NavItem> tabs, UserRole role) {
+  final siteItems = [
+    for (final i in _siteNavItems)
+      if (canAccessRoute(i.path, role)) i,
+  ];
+
+  List<_NavSlot> baseSlots;
   if (!_moreGroupedRoles.contains(role)) {
-    return [for (final t in tabs) _SingleSlot(t)];
-  }
-  final grouped = tabs.where((t) => _groupedPaths.contains(t.path)).toList();
-  if (grouped.length < 2) {
-    return [for (final t in tabs) _SingleSlot(t)];
-  }
-  final slots = <_NavSlot>[];
-  var inserted = false;
-  for (final t in tabs) {
-    if (_groupedPaths.contains(t.path)) {
-      if (!inserted) {
-        slots.add(_MoreSlot(grouped));
-        inserted = true;
+    baseSlots = [for (final t in tabs) _SingleSlot(t)];
+  } else {
+    final grouped = tabs.where((t) => _groupedPaths.contains(t.path)).toList();
+    if (grouped.length < 2) {
+      baseSlots = [for (final t in tabs) _SingleSlot(t)];
+    } else {
+      final slots = <_NavSlot>[];
+      var inserted = false;
+      for (final t in tabs) {
+        if (_groupedPaths.contains(t.path)) {
+          if (!inserted) {
+            slots.add(
+              _PopupSlot(
+                key: 'more',
+                label: 'More',
+                icon: Icons.grid_view_outlined,
+                selectedIcon: Icons.grid_view_rounded,
+                items: grouped,
+              ),
+            );
+            inserted = true;
+          }
+          continue;
+        }
+        slots.add(_SingleSlot(t));
       }
-      continue;
+      baseSlots = slots;
     }
-    slots.add(_SingleSlot(t));
   }
-  return slots;
+
+  if (siteItems.isNotEmpty) {
+    baseSlots.add(
+      _PopupSlot(
+        key: 'site',
+        label: 'Site',
+        icon: Icons.language_outlined,
+        selectedIcon: Icons.language,
+        items: siteItems,
+      ),
+    );
+  }
+
+  return baseSlots;
 }
 
 class HomeShell extends ConsumerWidget {
@@ -140,7 +196,7 @@ class HomeShell extends ConsumerWidget {
     final onAccount = _onAccountPage(location);
 
     // Only watch a queue if the role can even see that tab — no point
-    // polling it for roles who never see the tab at all.
+    // polling it for roles who never see the entry at all.
     final canSeeApprovals = tabs.any((t) => t.path == '/approvals');
     final hasPendingApprovals = canSeeApprovals
         ? ref
@@ -148,16 +204,25 @@ class HomeShell extends ConsumerWidget {
               .maybeWhen(data: (q) => !q.isEmpty, orElse: () => false)
         : false;
 
-    final canSeeReviews = tabs.any((t) => t.path == '/reviews');
+    final canSeeReviews = canAccessRoute('/reviews', role);
     final hasPendingReviews = canSeeReviews
         ? ref
               .watch(pendingReviewsProvider)
               .maybeWhen(data: (r) => r.isNotEmpty, orElse: () => false)
         : false;
 
+    final canSeePublishQueue = role == UserRole.admin;
+    final hasPendingPublishQueue = canSeePublishQueue
+        ? ref
+              .watch(publishQueueProvider)
+              .maybeWhen(data: (s) => s.pendingCount > 0, orElse: () => false)
+        : false;
+
+    // Keyed by popup slot key ('more' / 'site') plus any direct-tab paths —
+    // _FloatingNavBar checks both depending on the slot type.
     final pendingDots = <String, bool>{
       '/approvals': hasPendingApprovals,
-      '/reviews': hasPendingReviews,
+      'site': hasPendingReviews || hasPendingPublishQueue,
     };
 
     return Scaffold(
@@ -212,7 +277,7 @@ class _FloatingNavBar extends StatefulWidget {
 }
 
 class _FloatingNavBarState extends State<_FloatingNavBar> {
-  bool _moreOpen = false;
+  String? _openPopupKey;
 
   Color _colorFor(String path) {
     switch (path) {
@@ -220,17 +285,23 @@ class _FloatingNavBarState extends State<_FloatingNavBar> {
         return AppColors.turmeric;
       case '/stock':
         return AppColors.cumin;
+      case '/approvals':
+        return const Color(0xFF3D6B57);
       case '/catalog':
         return AppColors.paprika;
       case '/reviews':
         return const Color(0xFF3D6B57);
+      case '/publish-queue':
+        return const Color(0xFF2E7D32);
+      case '/analytics':
+        return AppColors.turmeric;
       default:
         return AppColors.maroon;
     }
   }
 
-  void _openMore(List<_NavItem> items) {
-    setState(() => _moreOpen = true);
+  void _openPopup(_PopupSlot slot) {
+    setState(() => _openPopupKey = slot.key);
     NavMoreSheet.show(
       context,
       bottomOffset:
@@ -238,7 +309,7 @@ class _FloatingNavBarState extends State<_FloatingNavBar> {
           LayoutConstants.navBarHeight +
           14,
       items: [
-        for (final item in items)
+        for (final item in slot.items)
           NavMoreItem(
             icon: item.icon,
             label: item.label,
@@ -247,7 +318,7 @@ class _FloatingNavBarState extends State<_FloatingNavBar> {
           ),
       ],
       onDismissed: () {
-        if (mounted) setState(() => _moreOpen = false);
+        if (mounted) setState(() => _openPopupKey = null);
       },
     );
   }
@@ -296,21 +367,23 @@ class _FloatingNavBarState extends State<_FloatingNavBar> {
                           showDot: widget.pendingDots[slot.item.path] ?? false,
                           onTap: () => widget.onNavigate(slot.item.path),
                         )
-                      else if (slot is _MoreSlot)
+                      else if (slot is _PopupSlot)
                         _NavIcon(
-                          icon: Icons.grid_view_outlined,
-                          selectedIcon: Icons.grid_view_rounded,
-                          label: 'More',
+                          icon: slot.icon,
+                          selectedIcon: slot.selectedIcon,
+                          label: slot.label,
                           selected:
                               !onAccount &&
-                              (_moreOpen ||
+                              (_openPopupKey == slot.key ||
                                   slot.items.any(
                                     (i) => location.startsWith(i.path),
                                   )),
-                          showDot: slot.items.any(
-                            (i) => widget.pendingDots[i.path] == true,
-                          ),
-                          onTap: () => _openMore(slot.items),
+                          showDot:
+                              widget.pendingDots[slot.key] ??
+                              slot.items.any(
+                                (i) => widget.pendingDots[i.path] == true,
+                              ),
+                          onTap: () => _openPopup(slot),
                         ),
                   ],
                 ),
