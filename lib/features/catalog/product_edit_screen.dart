@@ -54,6 +54,10 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
   bool _uploadingImage = false;
   bool _submitting = false;
 
+  // SEO card starts collapsed — it's the longest section and most edits
+  // don't touch it, so keep the screen scannable by default.
+  bool _seoExpanded = false;
+
   @override
   void initState() {
     super.initState();
@@ -368,6 +372,7 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
     final dirty = _isDirty;
 
     return Scaffold(
+      backgroundColor: scheme.surfaceContainerLowest,
       appBar: AppBar(
         title: Text(widget.product.name, overflow: TextOverflow.ellipsis),
       ),
@@ -515,20 +520,16 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
             icon: Icons.badge_outlined,
             title: 'Basics',
             children: [
-              TextField(
+              _BareField(
                 controller: _nameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Product name',
-                  prefixIcon: Icon(Icons.local_offer_outlined),
-                ),
+                label: 'Product name',
+                icon: Icons.local_offer_outlined,
               ),
-              const SizedBox(height: 14),
-              TextField(
+              const SizedBox(height: 12),
+              _BareField(
                 controller: _categoryCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Category',
-                  prefixIcon: Icon(Icons.category_outlined),
-                ),
+                label: 'Category',
+                icon: Icons.category_outlined,
               ),
             ],
           ),
@@ -537,6 +538,9 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
           _SectionCard(
             icon: Icons.sell_outlined,
             title: 'Pricing',
+            subtitle: _priceCtrls.isEmpty
+                ? null
+                : '${_priceCtrls.length} size${_priceCtrls.length == 1 ? '' : 's'}',
             children: [
               ..._priceCtrls.entries.map((e) {
                 final original = widget.product.sizes
@@ -548,121 +552,18 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
                     original != null && _priceChanged(e.key, original);
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: scheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: changed
-                            ? AppColors.turmeric.withValues(alpha: 0.6)
-                            : scheme.outlineVariant.withValues(alpha: 0.4),
-                        width: changed ? 1.4 : 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.cumin.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            e.key,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextField(
-                            controller: e.value,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            decoration: const InputDecoration(
-                              prefixText: '₹ ',
-                              border: InputBorder.none,
-                              isDense: true,
-                            ),
-                          ),
-                        ),
-                        if (changed)
-                          Container(
-                            width: 8,
-                            height: 8,
-                            margin: const EdgeInsets.only(left: 4),
-                            decoration: const BoxDecoration(
-                              color: AppColors.turmeric,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                      ],
-                    ),
+                  child: _PriceRow(
+                    size: e.key,
+                    controller: e.value,
+                    changed: changed,
                   ),
                 );
               }),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: scheme.outlineVariant,
-                    style: BorderStyle.solid,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Add a size',
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: TextField(
-                            controller: _newSizeCtrl,
-                            decoration: const InputDecoration(
-                              hintText: 'e.g. 500g',
-                              isDense: true,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: _newPriceCtrl,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            decoration: const InputDecoration(
-                              hintText: 'Price',
-                              isDense: true,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: _addSize,
-                          icon: const Icon(Icons.add_circle),
-                          color: scheme.primary,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 4),
+              _AddSizeRow(
+                sizeCtrl: _newSizeCtrl,
+                priceCtrl: _newPriceCtrl,
+                onAdd: _addSize,
               ),
             ],
           ),
@@ -685,6 +586,7 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
                 icon: Icons.star_outline,
                 color: AppColors.turmeric,
                 title: 'Featured',
+                subtitle: 'Shown in the featured carousel',
                 value: _featured,
                 onChanged: (v) => setState(() => _featured = v),
               ),
@@ -693,6 +595,7 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
                 icon: Icons.local_fire_department_outlined,
                 color: AppColors.maroon,
                 title: 'Bestseller',
+                subtitle: 'Gets the "Bestseller" badge',
                 value: _bestseller,
                 onChanged: (v) => setState(() => _bestseller = v),
               ),
@@ -701,6 +604,7 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
                 icon: Icons.fiber_new_outlined,
                 color: const Color(0xFF2E7D32),
                 title: 'New Arrival',
+                subtitle: 'Gets the "New" badge',
                 value: _newArrival,
                 onChanged: (v) => setState(() => _newArrival = v),
               ),
@@ -708,58 +612,14 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
           ),
 
           const SizedBox(height: 16),
-          Card(
-            clipBehavior: Clip.antiAlias,
-            child: Theme(
-              data: Theme.of(
-                context,
-              ).copyWith(dividerColor: Colors.transparent),
-              child: ExpansionTile(
-                leading: Icon(Icons.search, color: scheme.onSurfaceVariant),
-                title: const Text(
-                  'SEO & Description',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                children: [
-                  TextField(
-                    controller: _seoTitleCtrl,
-                    decoration: const InputDecoration(labelText: 'SEO title'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _seoMetaCtrl,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      labelText: 'Meta description',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _seoShortCtrl,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      labelText: 'Short description',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _seoLongCtrl,
-                    maxLines: 4,
-                    decoration: const InputDecoration(
-                      labelText: 'Long description',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _seoKeywordsCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Keywords (comma-separated)',
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          _SeoSection(
+            expanded: _seoExpanded,
+            onToggle: () => setState(() => _seoExpanded = !_seoExpanded),
+            titleCtrl: _seoTitleCtrl,
+            metaCtrl: _seoMetaCtrl,
+            shortCtrl: _seoShortCtrl,
+            longCtrl: _seoLongCtrl,
+            keywordsCtrl: _seoKeywordsCtrl,
           ),
 
           // Breathing room so content never sits directly under the
@@ -840,45 +700,352 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Shared section shell — every card on this screen (Basics, Pricing,
+// Visibility, SEO) uses the same header treatment so the page reads as one
+// consistent system instead of a pile of differently-styled widgets.
+// ─────────────────────────────────────────────────────────────────────────
+
 class _SectionCard extends StatelessWidget {
   final IconData icon;
   final String title;
+  final String? subtitle;
   final List<Widget> children;
   const _SectionCard({
     required this.icon,
     required this.title,
+    this.subtitle,
     required this.children,
   });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 18, color: scheme.onSurfaceVariant),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            ...children,
-          ],
-        ),
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.4)),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionHeader(icon: icon, title: title, subtitle: subtitle),
+          const SizedBox(height: 16),
+          ...children,
+        ],
       ),
     );
   }
 }
+
+class _SectionHeader extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  const _SectionHeader({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: AppColors.maroon.withValues(alpha: 0.10),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 16, color: AppColors.maroon),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ),
+        if (subtitle != null)
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: Text(
+              subtitle!,
+              style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+            ),
+          ),
+        if (trailing != null) trailing!,
+      ],
+    );
+  }
+}
+
+/// A borderless-input field inside a bordered, labeled box — this is the
+/// single "field container" pattern reused everywhere on this screen
+/// (Basics, SEO) so every field has its own clear boundary instead of
+/// floating text with no separation from its neighbors.
+class _BareField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final IconData? icon;
+  final int maxLines;
+  final int? maxLength;
+  final String? helper;
+  final TextInputType? keyboardType;
+
+  const _BareField({
+    required this.controller,
+    required this.label,
+    this.icon,
+    this.maxLines = 1,
+    this.maxLength,
+    this.helper,
+    this.keyboardType,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final count = controller.text.length;
+    final overLimit = maxLength != null && count > maxLength!;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: overLimit
+              ? scheme.error.withValues(alpha: 0.5)
+              : scheme.outlineVariant.withValues(alpha: 0.6),
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 15, color: scheme.onSurfaceVariant),
+                const SizedBox(width: 6),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurfaceVariant,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              if (maxLength != null) ...[
+                const Spacer(),
+                Text(
+                  '$count/$maxLength',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: overLimit
+                        ? scheme.error
+                        : scheme.onSurfaceVariant.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          TextField(
+            controller: controller,
+            maxLines: maxLines,
+            keyboardType: keyboardType,
+            style: Theme.of(context).textTheme.bodyMedium,
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              isDense: true,
+              contentPadding: EdgeInsets.only(top: 4, bottom: 6),
+              filled: false,
+            ),
+          ),
+          if (helper != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                helper!,
+                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Pricing
+// ─────────────────────────────────────────────────────────────────────────
+
+class _PriceRow extends StatelessWidget {
+  final String size;
+  final TextEditingController controller;
+  final bool changed;
+  const _PriceRow({
+    required this.size,
+    required this.controller,
+    required this.changed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: changed
+              ? AppColors.turmeric.withValues(alpha: 0.7)
+              : scheme.outlineVariant.withValues(alpha: 0.6),
+          width: changed ? 1.4 : 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.cumin.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              size,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: const InputDecoration(
+                prefixText: '₹ ',
+                border: InputBorder.none,
+                isDense: true,
+              ),
+            ),
+          ),
+          if (changed)
+            Container(
+              width: 8,
+              height: 8,
+              margin: const EdgeInsets.only(left: 4),
+              decoration: const BoxDecoration(
+                color: AppColors.turmeric,
+                shape: BoxShape.circle,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddSizeRow extends StatelessWidget {
+  final TextEditingController sizeCtrl;
+  final TextEditingController priceCtrl;
+  final VoidCallback onAdd;
+  const _AddSizeRow({
+    required this.sizeCtrl,
+    required this.priceCtrl,
+    required this.onAdd,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        color: scheme.surfaceContainerLowest,
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.add_circle_outline,
+                size: 15,
+                color: scheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Add a size',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurfaceVariant,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: TextField(
+                  controller: sizeCtrl,
+                  decoration: const InputDecoration(
+                    hintText: 'e.g. 500g',
+                    isDense: true,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: priceCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    hintText: 'Price',
+                    isDense: true,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              IconButton.filledTonal(
+                onPressed: onAdd,
+                icon: const Icon(Icons.add),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Visibility
+// ─────────────────────────────────────────────────────────────────────────
 
 /// Rounded row for a boolean flag — icon badge on the left (consistent with
 /// StatusBadge elsewhere in the app), title/subtitle, switch on the right.
@@ -907,12 +1074,12 @@ class _ToggleRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: value
             ? color.withValues(alpha: 0.06)
-            : scheme.surfaceContainerLow,
+            : scheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: value
               ? color.withValues(alpha: 0.3)
-              : scheme.outlineVariant.withValues(alpha: 0.4),
+              : scheme.outlineVariant.withValues(alpha: 0.5),
         ),
       ),
       child: Row(
@@ -941,6 +1108,175 @@ class _ToggleRow extends StatelessWidget {
           Switch(value: value, onChanged: onChanged),
         ],
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// SEO & Description — the section that was previously a bare ExpansionTile
+// with unstyled TextFields. Now: same card header language as every other
+// section, grouped sub-headings, and every field boxed with its own label
+// (and a character counter for the two fields that actually have a
+// practical length limit for search results).
+// ─────────────────────────────────────────────────────────────────────────
+
+class _SeoSection extends StatelessWidget {
+  final bool expanded;
+  final VoidCallback onToggle;
+  final TextEditingController titleCtrl,
+      metaCtrl,
+      shortCtrl,
+      longCtrl,
+      keywordsCtrl;
+
+  const _SeoSection({
+    required this.expanded,
+    required this.onToggle,
+    required this.titleCtrl,
+    required this.metaCtrl,
+    required this.shortCtrl,
+    required this.longCtrl,
+    required this.keywordsCtrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.4)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: onToggle,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: _SectionHeader(
+                icon: Icons.search,
+                title: 'SEO & Description',
+                subtitle: expanded ? null : 'Tap to edit',
+                trailing: AnimatedRotation(
+                  turns: expanded ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(
+                    Icons.expand_more,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            alignment: Alignment.topCenter,
+            child: !expanded
+                ? const SizedBox(width: double.infinity, height: 0)
+                : Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _SeoSubHeader(
+                          'Search Preview',
+                          'How this product can appear in search results',
+                        ),
+                        const SizedBox(height: 10),
+                        _BareField(
+                          controller: titleCtrl,
+                          label: 'SEO title',
+                          maxLength: 60,
+                        ),
+                        const SizedBox(height: 10),
+                        _BareField(
+                          controller: metaCtrl,
+                          label: 'Meta description',
+                          maxLines: 2,
+                          maxLength: 160,
+                        ),
+                        const SizedBox(height: 20),
+                        _SeoSubHeader(
+                          'Descriptions',
+                          'Shown on the product page',
+                        ),
+                        const SizedBox(height: 10),
+                        _BareField(
+                          controller: shortCtrl,
+                          label: 'Short description',
+                          maxLines: 2,
+                          helper: 'Used in listings and preview cards.',
+                        ),
+                        const SizedBox(height: 10),
+                        _BareField(
+                          controller: longCtrl,
+                          label: 'Long description',
+                          maxLines: 5,
+                          helper: 'The full write-up on the product page.',
+                        ),
+                        const SizedBox(height: 20),
+                        _SeoSubHeader(
+                          'Keywords',
+                          'Comma-separated, used for search matching',
+                        ),
+                        const SizedBox(height: 10),
+                        _BareField(
+                          controller: keywordsCtrl,
+                          label: 'Keywords',
+                          maxLines: 2,
+                          helper: 'e.g. garam masala, spice blend, cooking',
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SeoSubHeader extends StatelessWidget {
+  final String title;
+  final String caption;
+  const _SeoSubHeader(this.title, this.caption);
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 3,
+              height: 14,
+              decoration: BoxDecoration(
+                color: AppColors.turmeric,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Padding(
+          padding: const EdgeInsets.only(left: 11),
+          child: Text(
+            caption,
+            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+          ),
+        ),
+      ],
     );
   }
 }
