@@ -362,27 +362,33 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
                         ),
                       )
                     else ...[
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Theme.of(context).colorScheme.error,
-                          side: BorderSide(
-                            color: Theme.of(
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Theme.of(
                               context,
-                            ).colorScheme.error.withValues(alpha: 0.5),
+                            ).colorScheme.error,
+                            side: BorderSide(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.error.withValues(alpha: 0.5),
+                            ),
                           ),
+                          onPressed: () => _decideBatch('rejected'),
+                          icon: const Icon(Icons.close, size: 18),
+                          label: Text('Reject (${_selected.length})'),
                         ),
-                        onPressed: () => _decideBatch('rejected'),
-                        icon: const Icon(Icons.close, size: 18),
-                        label: Text('Reject (${_selected.length})'),
                       ),
                       const SizedBox(width: 8),
-                      FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF2E7D32),
+                      Expanded(
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF2E7D32),
+                          ),
+                          onPressed: () => _decideBatch('approved'),
+                          icon: const Icon(Icons.check, size: 18),
+                          label: Text('Approve (${_selected.length})'),
                         ),
-                        onPressed: () => _decideBatch('approved'),
-                        icon: const Icon(Icons.check, size: 18),
-                        label: Text('Approve (${_selected.length})'),
                       ),
                     ],
                   ],
