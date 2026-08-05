@@ -12,6 +12,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/utils/haptics.dart';
 import '../../shared/widgets/success_pulse.dart';
 import '../../shared/widgets/status_badge.dart';
+import '../../shared/widgets/swipe_to_confirm.dart';
 
 /// Edits one product's catalog data — name, category, image, prices, the
 /// four visibility flags, and SEO copy. No stock/quantity fields here;
@@ -22,6 +23,10 @@ import '../../shared/widgets/status_badge.dart';
 ///  - manager → POST to /api/product-core/request, held for an admin to
 ///              approve/reject on the Approvals screen. Nothing here ever
 ///              touches the live site until that happens.
+///
+/// Saving now goes through a swipe-to-confirm sheet (same pattern as role
+/// reassignment on CustomerDetailScreen) instead of a plain tap, since a
+/// tap on "Save Changes" used to be enough to push a live catalog edit.
 ///
 /// The bottom action bar (Cancel / Submit) only appears once there's an
 /// actual unsaved change — see `_isDirty`. Pushed via the root navigator
@@ -293,6 +298,11 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
     Haptics.tap();
   }
 
+  /// Tapping the primary action bar button opens a swipe-to-confirm sheet
+  /// (same pattern as role reassignment on CustomerDetailScreen) instead of
+  /// saving on a single tap — a deliberate slide gesture is what actually
+  /// pushes the change, whether that's straight to the live site (admin)
+  /// or into the approval queue (manager).
   Future<void> _submit() async {
     final updates = _buildUpdates();
     if (updates.isEmpty) return; // bar shouldn't be visible in this case anyway
@@ -300,30 +310,24 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
     final role = ref.read(authControllerProvider).role;
     final isAdmin = role == UserRole.admin;
 
-    if (!isAdmin) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Submit for approval?'),
-          content: Text(
-            'This sends ${updates.length} change${updates.length == 1 ? '' : 's'} to '
-            '"${widget.product.name}" to an admin for review. Nothing goes live on the '
-            'site until it\'s approved.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Submit'),
-            ),
-          ],
-        ),
-      );
-      if (confirmed != true) return;
-    }
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ConfirmSaveSheet(
+        isAdmin: isAdmin,
+        changeCount: updates.length,
+        productName: widget.product.name,
+      ),
+    );
+    if (confirmed != true) return;
+
+    await _performSubmit(isAdmin);
+  }
+
+  Future<void> _performSubmit(bool isAdmin) async {
+    final updates = _buildUpdates();
+    if (updates.isEmpty) return;
 
     setState(() => _submitting = true);
     try {
@@ -370,6 +374,24 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
     final scheme = Theme.of(context).colorScheme;
     final imageUrl = _resolveImageUrl();
     final dirty = _isDirty;
+
+    // Category choices for the picker — every category already in use
+    // across the catalog, plus the current product's category even if the
+    // catalog list hasn't loaded yet.
+    final existingCategories = ref
+        .watch(catalogProvider)
+        .maybeWhen(
+          data: (products) {
+            final set = products
+                .map((p) => p.category)
+                .where((c) => c.isNotEmpty)
+                .toSet();
+            set.add(widget.product.category);
+            final list = set.toList()..sort();
+            return list;
+          },
+          orElse: () => [widget.product.category],
+        );
 
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
@@ -526,10 +548,9 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
                 icon: Icons.local_offer_outlined,
               ),
               const SizedBox(height: 12),
-              _BareField(
+              _CategoryField(
                 controller: _categoryCtrl,
-                label: 'Category',
-                icon: Icons.category_outlined,
+                existingCategories: existingCategories,
               ),
             ],
           ),
@@ -691,6 +712,119 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
                         : (isAdmin ? 'Save Changes' : 'Submit for Approval'),
                   ),
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Swipe-to-confirm sheet shown before an actual save/submit fires — same
+// pattern as the role-reassignment confirm on CustomerDetailScreen.
+// ─────────────────────────────────────────────────────────────────────────
+
+class _ConfirmSaveSheet extends StatelessWidget {
+  final bool isAdmin;
+  final int changeCount;
+  final String productName;
+  const _ConfirmSaveSheet({
+    required this.isAdmin,
+    required this.changeCount,
+    required this.productName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final color = isAdmin ? const Color(0xFF2E7D32) : AppColors.turmeric;
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHigh,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: scheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: color.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      isAdmin ? Icons.publish_outlined : Icons.send_outlined,
+                      color: color,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text.rich(
+                        TextSpan(
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          children: [
+                            TextSpan(text: isAdmin ? 'Save ' : 'Submit '),
+                            TextSpan(
+                              text:
+                                  '$changeCount change${changeCount == 1 ? '' : 's'}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            TextSpan(text: isAdmin ? ' to ' : ' on '),
+                            TextSpan(
+                              text: productName,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: color,
+                              ),
+                            ),
+                            TextSpan(
+                              text: isAdmin
+                                  ? '? This goes live immediately.'
+                                  : ' for admin approval? Nothing goes live '
+                                        'until it\'s approved.',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 22),
+              SwipeToConfirm(
+                label: isAdmin ? 'Slide to save' : 'Slide to submit',
+                color: color,
+                onConfirmed: () => Navigator.pop(context, true),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
               ),
             ],
           ),
@@ -891,6 +1025,299 @@ class _BareField extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Category picker — select from every category already used across the
+// catalog, or add a brand-new one. Replaces the old free-typed field so a
+// stray typo can't silently create a duplicate "spice" vs "Spices" category.
+// ─────────────────────────────────────────────────────────────────────────
+
+class _CategoryField extends StatefulWidget {
+  final TextEditingController controller;
+  final List<String> existingCategories;
+  const _CategoryField({
+    required this.controller,
+    required this.existingCategories,
+  });
+
+  @override
+  State<_CategoryField> createState() => _CategoryFieldState();
+}
+
+class _CategoryFieldState extends State<_CategoryField> {
+  bool _customMode = false;
+
+  Future<void> _openPicker() async {
+    final chosen = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _CategoryPickerSheet(
+        categories: widget.existingCategories,
+        current: widget.controller.text,
+      ),
+    );
+    if (chosen == null) return;
+    if (chosen == '__new__') {
+      setState(() {
+        _customMode = true;
+        widget.controller.text = '';
+      });
+    } else {
+      setState(() {
+        _customMode = false;
+        widget.controller.text = chosen;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    if (_customMode) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _BareField(
+            controller: widget.controller,
+            label: 'New category',
+            icon: Icons.category_outlined,
+            helper: 'This creates a new category.',
+          ),
+          if (widget.existingCategories.isNotEmpty)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => setState(() => _customMode = false),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                icon: const Icon(Icons.list, size: 15),
+                label: const Text(
+                  'Choose an existing category instead',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ),
+            ),
+        ],
+      );
+    }
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: _openPicker,
+      child: Container(
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: scheme.outlineVariant.withValues(alpha: 0.6),
+          ),
+        ),
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.category_outlined,
+                  size: 15,
+                  color: scheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Category',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurfaceVariant,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.controller.text.isEmpty
+                        ? 'Select a category'
+                        : widget.controller.text,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: widget.controller.text.isEmpty
+                          ? scheme.onSurfaceVariant
+                          : null,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.unfold_more,
+                  size: 18,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoryPickerSheet extends StatelessWidget {
+  final List<String> categories;
+  final String current;
+  const _CategoryPickerSheet({
+    required this.categories,
+    required this.current,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHigh,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: scheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              Text(
+                'Select a category',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 14),
+              if (categories.isNotEmpty)
+                Flexible(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.42,
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          for (final c in categories)
+                            _CategoryTile(
+                              label: c,
+                              selected: c == current,
+                              onTap: () => Navigator.pop(context, c),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              if (categories.isNotEmpty) const SizedBox(height: 4),
+              Material(
+                color: AppColors.maroon.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () => Navigator.pop(context, '__new__'),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.add_circle_outline,
+                          color: AppColors.maroon,
+                          size: 20,
+                        ),
+                        SizedBox(width: 12),
+                        Text(
+                          'Add new category',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.maroon,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoryTile extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _CategoryTile({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Material(
+        color: selected
+            ? AppColors.maroon.withValues(alpha: 0.1)
+            : scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: selected ? AppColors.maroon : null,
+                    ),
+                  ),
+                ),
+                if (selected)
+                  const Icon(Icons.check, color: AppColors.maroon, size: 18),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Pricing
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -980,7 +1407,9 @@ class _AddSizeRow extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
         color: scheme.surfaceContainerLowest,
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+        border: Border.all(
+          color: scheme.outlineVariant.withValues(alpha: 0.6),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1113,11 +1542,9 @@ class _ToggleRow extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// SEO & Description — the section that was previously a bare ExpansionTile
-// with unstyled TextFields. Now: same card header language as every other
-// section, grouped sub-headings, and every field boxed with its own label
-// (and a character counter for the two fields that actually have a
-// practical length limit for search results).
+// SEO & Description — grouped into three clearly labeled sub-sections,
+// every field individually boxed with its own label (and a character
+// counter for the two fields that have a practical search-result limit).
 // ─────────────────────────────────────────────────────────────────────────
 
 class _SeoSection extends StatelessWidget {

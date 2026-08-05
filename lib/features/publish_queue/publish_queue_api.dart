@@ -121,4 +121,12 @@ class PublishQueueApi {
     final res = await client.post('/api/admin/sync-queue/run', {});
     return PublishResult.fromJson(res.data);
   }
+
+  /// ASSUMPTION: the backend exposes POST /api/admin/sync-queue/discard,
+  /// clearing every currently-pending item without publishing anything
+  /// (nothing goes live, and the discarded items are gone — not archived).
+  /// Flag if this endpoint doesn't exist yet so the backend agent can add it.
+  Future<void> discardQueue() async {
+    await client.post('/api/admin/sync-queue/discard', {});
+  }
 }
