@@ -8,7 +8,6 @@ import '../../core/constants/layout_constants.dart';
 import '../../core/utils/haptics.dart';
 import '../../shared/widgets/tap_scale.dart';
 import '../../shared/widgets/staggered_fade_in.dart';
-import '../../shared/widgets/swipe_to_confirm.dart';
 import '../../shared/widgets/swipe_confirm_sheet.dart';
 import '../../shared/widgets/success_pulse.dart';
 
@@ -69,13 +68,31 @@ class _PublishQueueViewState extends ConsumerState<PublishQueueView> {
   bool _discarding = false;
 
   Future<void> _confirmAndPublish(int pendingCount) async {
-    final confirmed = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _ConfirmPublishSheet(pendingCount: pendingCount),
+    final confirmed = await SwipeConfirmSheet.show(
+      context,
+      icon: Icons.cloud_upload_outlined,
+      color: AppColors.maroon,
+      message: Text.rich(
+        TextSpan(
+          style: Theme.of(context).textTheme.bodyMedium,
+          children: [
+            const TextSpan(text: 'Publish '),
+            TextSpan(
+              text: '$pendingCount change${pendingCount == 1 ? '' : 's'}',
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: AppColors.maroon,
+              ),
+            ),
+            const TextSpan(
+              text: ' to the live site? This triggers a real deploy.',
+            ),
+          ],
+        ),
+      ),
+      swipeLabel: 'Slide to publish',
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
 
     setState(() => _publishing = true);
     try {
@@ -363,104 +380,6 @@ class _HeroCard extends StatelessWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-/// Swipe-to-confirm sheet shown before an actual publish/deploy fires —
-/// same pattern as the role-reassignment confirm in CustomerDetailScreen,
-/// so a deliberate slide gesture (not a single tap) is what triggers a
-/// real deploy to the live site.
-class _ConfirmPublishSheet extends StatelessWidget {
-  final int pendingCount;
-  const _ConfirmPublishSheet({required this.pendingCount});
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHigh,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: scheme.outlineVariant,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.maroon.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: AppColors.maroon.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.cloud_upload_outlined,
-                      color: AppColors.maroon,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text.rich(
-                        TextSpan(
-                          style: Theme.of(context).textTheme.bodyMedium,
-                          children: [
-                            const TextSpan(text: 'Publish '),
-                            TextSpan(
-                              text:
-                                  '$pendingCount change${pendingCount == 1 ? '' : 's'}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.maroon,
-                              ),
-                            ),
-                            const TextSpan(
-                              text:
-                                  ' to the live site? This triggers a real deploy.',
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 22),
-              SwipeToConfirm(
-                label: 'Slide to publish',
-                color: AppColors.maroon,
-                onConfirmed: () => Navigator.pop(context, true),
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

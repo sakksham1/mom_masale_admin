@@ -10,9 +10,9 @@ import '../../core/network/api_exception.dart';
 import '../../core/config/env.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/haptics.dart';
-import '../../shared/widgets/success_pulse.dart';
 import '../../shared/widgets/status_badge.dart';
-import '../../shared/widgets/swipe_to_confirm.dart';
+import '../../shared/widgets/success_pulse.dart';
+import '../../shared/widgets/swipe_confirm_sheet.dart';
 
 /// Edits one product's catalog data — name, category, image, prices, the
 /// four visibility flags, and SEO copy. No stock/quantity fields here;
@@ -310,17 +310,36 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
     final role = ref.read(authControllerProvider).role;
     final isAdmin = role == UserRole.admin;
 
-    final confirmed = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _ConfirmSaveSheet(
-        isAdmin: isAdmin,
-        changeCount: updates.length,
-        productName: widget.product.name,
+    final saveColor = isAdmin ? const Color(0xFF2E7D32) : AppColors.turmeric;
+    final confirmed = await SwipeConfirmSheet.show(
+      context,
+      icon: isAdmin ? Icons.publish_outlined : Icons.send_outlined,
+      color: saveColor,
+      message: Text.rich(
+        TextSpan(
+          style: Theme.of(context).textTheme.bodyMedium,
+          children: [
+            TextSpan(text: isAdmin ? 'Save ' : 'Submit '),
+            TextSpan(
+              text: '${updates.length} change${updates.length == 1 ? '' : 's'}',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            TextSpan(text: isAdmin ? ' to ' : ' on '),
+            TextSpan(
+              text: widget.product.name,
+              style: TextStyle(fontWeight: FontWeight.w700, color: saveColor),
+            ),
+            TextSpan(
+              text: isAdmin
+                  ? '? This goes live immediately.'
+                  : ' for admin approval? Nothing goes live until it\'s approved.',
+            ),
+          ],
+        ),
       ),
+      swipeLabel: isAdmin ? 'Slide to save' : 'Slide to submit',
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
 
     await _performSubmit(isAdmin);
   }
@@ -722,119 +741,6 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Swipe-to-confirm sheet shown before an actual save/submit fires — same
-// pattern as the role-reassignment confirm on CustomerDetailScreen.
-// ─────────────────────────────────────────────────────────────────────────
-
-class _ConfirmSaveSheet extends StatelessWidget {
-  final bool isAdmin;
-  final int changeCount;
-  final String productName;
-  const _ConfirmSaveSheet({
-    required this.isAdmin,
-    required this.changeCount,
-    required this.productName,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final color = isAdmin ? const Color(0xFF2E7D32) : AppColors.turmeric;
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHigh,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: scheme.outlineVariant,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: color.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      isAdmin ? Icons.publish_outlined : Icons.send_outlined,
-                      color: color,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text.rich(
-                        TextSpan(
-                          style: Theme.of(context).textTheme.bodyMedium,
-                          children: [
-                            TextSpan(text: isAdmin ? 'Save ' : 'Submit '),
-                            TextSpan(
-                              text:
-                                  '$changeCount change${changeCount == 1 ? '' : 's'}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            TextSpan(text: isAdmin ? ' to ' : ' on '),
-                            TextSpan(
-                              text: productName,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: color,
-                              ),
-                            ),
-                            TextSpan(
-                              text: isAdmin
-                                  ? '? This goes live immediately.'
-                                  : ' for admin approval? Nothing goes live '
-                                        'until it\'s approved.',
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 22),
-              SwipeToConfirm(
-                label: isAdmin ? 'Slide to save' : 'Slide to submit',
-                color: color,
-                onConfirmed: () => Navigator.pop(context, true),
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────
 // Shared section shell — every card on this screen (Basics, Pricing,
 // Visibility, SEO) uses the same header treatment so the page reads as one
 // consistent system instead of a pile of differently-styled widgets.
@@ -1170,10 +1076,7 @@ class _CategoryFieldState extends State<_CategoryField> {
 class _CategoryPickerSheet extends StatelessWidget {
   final List<String> categories;
   final String current;
-  const _CategoryPickerSheet({
-    required this.categories,
-    required this.current,
-  });
+  const _CategoryPickerSheet({required this.categories, required this.current});
 
   @override
   Widget build(BuildContext context) {
@@ -1238,10 +1141,7 @@ class _CategoryPickerSheet extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                   onTap: () => Navigator.pop(context, '__new__'),
                   child: const Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     child: Row(
                       children: [
                         Icon(
@@ -1407,9 +1307,7 @@ class _AddSizeRow extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
         color: scheme.surfaceContainerLowest,
-        border: Border.all(
-          color: scheme.outlineVariant.withValues(alpha: 0.6),
-        ),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -5,6 +5,8 @@ import 'sessions_provider.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/utils/haptics.dart';
 import '../../core/theme/app_colors.dart';
+import '../../shared/widgets/swipe_confirm_sheet.dart';
+import '../../shared/widgets/success_pulse.dart';
 
 IconData _platformIcon(String? platform) {
   switch (platform) {
@@ -93,34 +95,29 @@ class _SessionTileState extends ConsumerState<_SessionTile> {
   bool _busy = false;
 
   Future<void> _revoke() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Log out this device?'),
-        content: Text(
-          'This will sign out the ${_platformLabel(widget.session.platform)} session '
-          'last active on ${widget.session.lastSeenAt}.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Log out'),
-          ),
-        ],
+    final confirmed = await SwipeConfirmSheet.show(
+      context,
+      icon: Icons.logout,
+      color: Theme.of(context).colorScheme.error,
+      message: Text(
+        'This will sign out the ${_platformLabel(widget.session.platform)} session '
+        'last active on ${widget.session.lastSeenAt}.',
+        style: Theme.of(context).textTheme.bodyMedium,
       ),
+      swipeLabel: 'Slide to log out',
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
 
     setState(() => _busy = true);
     try {
       await ref.read(sessionsApiProvider).revoke(widget.session.id);
-      Haptics.tap();
+      Haptics.success();
       ref.invalidate(userSessionsProvider);
+      if (mounted) {
+        await SuccessPulse.show(context, 'Device logged out');
+      }
     } on ApiException catch (e) {
+      Haptics.warning();
       if (mounted) {
         ScaffoldMessenger.of(
           context,
