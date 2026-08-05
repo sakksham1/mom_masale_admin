@@ -1,4 +1,3 @@
-// lib/shared/widgets/nav_more_sheet.dart
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'tap_scale.dart';
@@ -17,10 +16,6 @@ class NavMoreItem {
   });
 }
 
-/// Animated "more" popup for the floating nav bar — used when a role has
-/// too many sections to fit as direct tabs (currently: admin). Pops up
-/// just above the nav bar with a soft blur scrim behind it; each item
-/// pops in with a slight stagger.
 class NavMoreSheet {
   NavMoreSheet._();
 
@@ -32,7 +27,6 @@ class NavMoreSheet {
   }) {
     late OverlayEntry entry;
     final overlayState = Overlay.of(context);
-
     entry = OverlayEntry(
       builder: (_) => _NavMoreOverlay(
         items: items,
@@ -43,7 +37,6 @@ class NavMoreSheet {
         },
       ),
     );
-
     overlayState.insert(entry);
   }
 }
@@ -66,8 +59,8 @@ class _NavMoreOverlayState extends State<_NavMoreOverlay>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 260),
-    reverseDuration: const Duration(milliseconds: 180),
+    duration: const Duration(milliseconds: 320),
+    reverseDuration: const Duration(milliseconds: 200),
   )..forward();
 
   bool _closing = false;
@@ -124,9 +117,9 @@ class _NavMoreOverlayState extends State<_NavMoreOverlay>
                 child: Opacity(
                   opacity: _controller.value.clamp(0, 1),
                   child: Transform.translate(
-                    offset: Offset(0, 24 * (1 - t)),
+                    offset: Offset(0, 18 * (1 - t)),
                     child: Transform.scale(
-                      scale: 0.92 + 0.08 * t,
+                      scale: 0.94 + 0.06 * t,
                       alignment: Alignment.bottomCenter,
                       child: _MoreCard(
                         items: widget.items,
@@ -163,7 +156,7 @@ class _MoreCard extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+          padding: const EdgeInsets.fromLTRB(12, 18, 12, 18),
           decoration: BoxDecoration(
             color: scheme.surfaceContainerHigh.withValues(alpha: 0.92),
             borderRadius: BorderRadius.circular(28),
@@ -184,21 +177,26 @@ class _MoreCard extends StatelessWidget {
               Container(
                 width: 36,
                 height: 4,
-                margin: const EdgeInsets.only(bottom: 14),
+                margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
                   color: scheme.outlineVariant,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 4,
+                runSpacing: 12,
                 children: [
                   for (var i = 0; i < items.length; i++)
-                    _PoppingItem(
-                      item: items[i],
-                      index: i,
-                      progress: progress,
-                      onTap: () => onItemTap(items[i]),
+                    SizedBox(
+                      width: 76,
+                      child: _PoppingItem(
+                        item: items[i],
+                        index: i,
+                        progress: progress,
+                        onTap: () => onItemTap(items[i]),
+                      ),
                     ),
                 ],
               ),
@@ -224,10 +222,9 @@ class _PoppingItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Each item starts its pop-in slightly after the previous one.
-    final start = 0.15 * index;
+    final start = (0.08 * index).clamp(0.0, 0.5);
     final localT = ((progress - start) / (1 - start)).clamp(0.0, 1.0);
-    final scale = Curves.elasticOut.transform(localT);
+    final scale = Curves.easeOutBack.transform(localT);
 
     return Opacity(
       opacity: localT,
@@ -235,41 +232,40 @@ class _PoppingItem extends StatelessWidget {
         scale: scale <= 0 ? 0.01 : scale,
         child: TapScale(
           onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        item.color.withValues(alpha: 0.22),
-                        item.color.withValues(alpha: 0.08),
-                      ],
-                    ),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: item.color.withValues(alpha: 0.35),
-                    ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      item.color.withValues(alpha: 0.22),
+                      item.color.withValues(alpha: 0.08),
+                    ],
                   ),
-                  child: Icon(item.icon, color: item.color, size: 24),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: item.color.withValues(alpha: 0.35)),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  item.label,
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+                child: Icon(item.icon, color: item.color, size: 23),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                item.label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
+                  decoration: TextDecoration.none,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

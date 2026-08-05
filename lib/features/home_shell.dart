@@ -56,6 +56,7 @@ const _allNavItems = [
     Icons.inventory,
     'Packaging',
   ),
+  _NavItem('/my-requests', Icons.list_alt_outlined, Icons.list_alt, 'Requests'),
 ];
 
 /// The "Site" popup's contents — Catalog / Reviews / Publish Queue /

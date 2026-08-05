@@ -280,12 +280,20 @@ class _HeroCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Icon(
-            calm ? Icons.cloud_done_outlined : Icons.cloud_upload_outlined,
-            size: 40,
-            color: accent,
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.14),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              calm ? Icons.cloud_done_outlined : Icons.cloud_upload_outlined,
+              size: 32,
+              color: accent,
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Text(
             calm
                 ? 'All caught up'
@@ -303,59 +311,54 @@ class _HeroCard extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           if (!calm) ...[
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: scheme.error,
-                      side: BorderSide(
-                        color: scheme.error.withValues(alpha: 0.5),
-                      ),
-                      minimumSize: const Size.fromHeight(52),
-                    ),
-                    onPressed: onDiscard,
-                    icon: discarding
-                        ? SizedBox(
-                            height: 16,
-                            width: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: scheme.error,
-                            ),
-                          )
-                        : const Icon(Icons.delete_outline),
-                    label: Text(discarding ? 'Discarding…' : 'Discard'),
-                  ),
+            const SizedBox(height: 22),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.maroon,
+                  minimumSize: const Size.fromHeight(52),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.maroon,
-                      minimumSize: const Size.fromHeight(52),
-                    ),
-                    onPressed: onPublish,
-                    icon: publishing
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(Icons.publish),
-                    label: Text(
-                      publishing
-                          ? 'Publishing…'
-                          : 'Publish $pendingCount Change${pendingCount == 1 ? '' : 's'}',
-                    ),
-                  ),
+                onPressed: onPublish,
+                icon: publishing
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.publish),
+                label: Text(
+                  publishing
+                      ? 'Publishing…'
+                      : 'Publish $pendingCount Change${pendingCount == 1 ? '' : 's'}',
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton.icon(
+                style: TextButton.styleFrom(
+                  foregroundColor: scheme.error,
+                  minimumSize: const Size.fromHeight(44),
+                ),
+                onPressed: onDiscard,
+                icon: discarding
+                    ? SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: scheme.error,
+                        ),
+                      )
+                    : const Icon(Icons.delete_outline, size: 18),
+                label: Text(discarding ? 'Discarding…' : 'Discard changes'),
+              ),
             ),
           ],
         ],

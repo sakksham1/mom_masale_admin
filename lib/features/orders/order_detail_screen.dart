@@ -13,6 +13,7 @@ import '../customers/customers_api.dart';
 import '../customers/customers_provider.dart';
 import '../customers/customer_detail_screen.dart';
 import '../customers/role_display.dart';
+import '../../shared/widgets/confirm_dialog.dart';
 
 const _statusFlow = ['placed', 'packed', 'shipped', 'delivered', 'cancelled'];
 const _paymentStatuses = ['created', 'paid', 'failed', 'cod'];
@@ -139,26 +140,17 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   }
 
   Future<void> _cancel() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cancel this order?'),
-        content: Text(
+    final confirmed = await ConfirmDialog.show(
+      context,
+      title: 'Cancel this order?',
+      message:
           'Order #${_order.id} for ${_order.customerName} will be marked cancelled.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Back'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Cancel Order'),
-          ),
-        ],
-      ),
+      icon: Icons.cancel_outlined,
+      confirmLabel: 'Cancel Order',
+      cancelLabel: 'Back',
+      destructive: true,
     );
-    if (confirmed == true) {
+    if (confirmed) {
       await _persist(status: 'cancelled', paymentStatus: _order.paymentStatus);
     }
   }
