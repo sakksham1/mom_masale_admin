@@ -13,7 +13,9 @@ import '../customers/customers_api.dart';
 import '../customers/customers_provider.dart';
 import '../customers/customer_detail_screen.dart';
 import '../customers/role_display.dart';
-import '../../shared/widgets/confirm_dialog.dart';
+import '../../shared/widgets/swipe_confirm_sheet.dart';
+import '../../shared/widgets/success_pulse.dart';
+import '../../core/utils/haptics.dart';
 
 const _statusFlow = ['placed', 'packed', 'shipped', 'delivered', 'cancelled'];
 const _paymentStatuses = ['created', 'paid', 'failed', 'cod'];
@@ -117,12 +119,12 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         _paymentStatus = paymentStatus;
       });
       ref.invalidate(ordersProvider);
+      Haptics.success();
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Order updated')));
+        await SuccessPulse.show(context, 'Order updated');
       }
     } on ApiException catch (e) {
+      Haptics.warning();
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -136,19 +138,78 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   Future<void> _advance() async {
     final next = _nextStatus(_order.status);
     if (next == null) return;
+    final confirmed = await SwipeConfirmSheet.show(
+      context,
+      icon: Icons.arrow_forward,
+      color: AppColors.maroon,
+      message: Text.rich(
+        TextSpan(
+          style: Theme.of(context).textTheme.bodyMedium,
+          children: [
+            const TextSpan(text: 'Mark order #'),
+            TextSpan(
+              text: '${_order.id}',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            TextSpan(text: ' as ${_statusLabel(next)}?'),
+          ],
+        ),
+      ),
+      swipeLabel: 'Slide to update',
+    );
+    if (!confirmed) return;
     await _persist(status: next, paymentStatus: _order.paymentStatus);
   }
 
-  Future<void> _cancel() async {
-    final confirmed = await ConfirmDialog.show(
+  Future<void> _confirmAndSave() async {
+    final confirmed = await SwipeConfirmSheet.show(
       context,
-      title: 'Cancel this order?',
-      message:
-          'Order #${_order.id} for ${_order.customerName} will be marked cancelled.',
+      icon: Icons.save_outlined,
+      color: AppColors.maroon,
+      message: Text.rich(
+        TextSpan(
+          style: Theme.of(context).textTheme.bodyMedium,
+          children: [
+            const TextSpan(text: 'Update order #'),
+            TextSpan(
+              text: '${_order.id}',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const TextSpan(text: ' to '),
+            TextSpan(
+              text:
+                  '${_statusLabel(_status)} · ${_statusLabel(_paymentStatus)}',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const TextSpan(text: '?'),
+          ],
+        ),
+      ),
+      swipeLabel: 'Slide to save',
+    );
+    if (!confirmed) return;
+    await _persist(status: _status, paymentStatus: _paymentStatus);
+  }
+
+  Future<void> _cancel() async {
+    final confirmed = await SwipeConfirmSheet.show(
+      context,
       icon: Icons.cancel_outlined,
-      confirmLabel: 'Cancel Order',
-      cancelLabel: 'Back',
-      destructive: true,
+      color: Theme.of(context).colorScheme.error,
+      message: Text.rich(
+        TextSpan(
+          style: Theme.of(context).textTheme.bodyMedium,
+          children: [
+            const TextSpan(text: 'Cancel order #'),
+            TextSpan(
+              text: '${_order.id}',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            TextSpan(text: ' for ${_order.customerName}?'),
+          ],
+        ),
+      ),
+      swipeLabel: 'Slide to cancel order',
     );
     if (confirmed) {
       await _persist(status: 'cancelled', paymentStatus: _order.paymentStatus);
@@ -193,8 +254,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             canCancel: canCancel,
             onStatusChanged: (v) => setState(() => _status = v),
             onPaymentStatusChanged: (v) => setState(() => _paymentStatus = v),
-            onSave: () =>
-                _persist(status: _status, paymentStatus: _paymentStatus),
+            onSave: _confirmAndSave,
             onAdvance: _advance,
             onCancel: _cancel,
           ),

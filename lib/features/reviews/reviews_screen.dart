@@ -11,6 +11,7 @@ import '../../core/utils/haptics.dart';
 import '../../shared/widgets/success_pulse.dart';
 import '../../shared/widgets/tap_scale.dart';
 import '../../core/config/env.dart';
+import '../../shared/widgets/swipe_confirm_sheet.dart';
 
 /// Approval queue for customer product reviews. Two tabs: Pending (with
 /// actions) and Approved (read-only history). Decide is admin-only on the
@@ -175,6 +176,18 @@ class _ReviewCardState extends ConsumerState<_ReviewCard> {
     if (decision == 'rejected') {
       reason = await _askRejectReason();
       if (reason == null) return; // cancelled
+    } else {
+      final confirmed = await SwipeConfirmSheet.show(
+        context,
+        icon: Icons.check_circle_outline,
+        color: const Color(0xFF2E7D32),
+        message: Text(
+          'Approve this review? It will go live on the site.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        swipeLabel: 'Slide to approve',
+      );
+      if (!confirmed) return;
     }
     setState(() => _busy = true);
     try {

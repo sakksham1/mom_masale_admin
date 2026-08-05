@@ -8,6 +8,7 @@ import '../../core/utils/currency.dart';
 import '../../core/constants/layout_constants.dart';
 import '../../core/utils/haptics.dart';
 import '../../shared/widgets/product_avatar.dart';
+import '../../shared/widgets/success_pulse.dart';
 
 /// Products tab of the Inventory screen. View-only for packaging, manager,
 /// admin. Warehouser sees an edit button per size that opens a bottom sheet
@@ -138,11 +139,9 @@ class _SizeRowState extends ConsumerState<_SizeRow> {
             reason: reason,
             note: note,
           );
-      Haptics.tap();
+      Haptics.success();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Submitted — pending approval')),
-        );
+        await SuccessPulse.show(context, 'Submitted — pending approval');
       }
     } on ApiException catch (e) {
       Haptics.warning();

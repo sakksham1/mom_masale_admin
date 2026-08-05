@@ -7,6 +7,7 @@ import '../../core/network/api_exception.dart';
 import '../../core/constants/layout_constants.dart';
 import '../../core/utils/haptics.dart';
 import '../../shared/widgets/success_pulse.dart';
+import '../../shared/widgets/swipe_confirm_sheet.dart';
 
 class ApprovalsScreen extends ConsumerStatefulWidget {
   const ApprovalsScreen({super.key});
@@ -61,25 +62,78 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
     int id,
     String decision,
   ) async {
+    final confirmed = await SwipeConfirmSheet.show(
+      context,
+      icon: decision == 'approved'
+          ? Icons.check_circle_outline
+          : Icons.cancel_outlined,
+      color: decision == 'approved'
+          ? const Color(0xFF2E7D32)
+          : Theme.of(context).colorScheme.error,
+      message: Text(
+        decision == 'approved'
+            ? 'Approve this request? The change will take effect.'
+            : 'Reject this request? It will be removed from the queue.',
+        style: Theme.of(context).textTheme.bodyMedium,
+      ),
+      swipeLabel: decision == 'approved'
+          ? 'Slide to approve'
+          : 'Slide to reject',
+    );
+    if (!confirmed || !context.mounted) return;
+
     try {
       await ref
           .read(approvalsApiProvider)
           .decide(type: type, id: id, decision: decision);
       ref.invalidate(approvalsQueueProvider);
+      Haptics.success();
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(decision == 'approved' ? 'Approved' : 'Rejected'),
-          ),
+        await SuccessPulse.show(
+          context,
+          decision == 'approved' ? 'Approved' : 'Rejected',
         );
       }
     } on ApiException catch (e) {
+      Haptics.warning();
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     }
+  }
+
+  Future<void> _confirmAndDecideBatch(String decision) async {
+    if (_selected.isEmpty) return;
+    final confirmed = await SwipeConfirmSheet.show(
+      context,
+      icon: decision == 'approved'
+          ? Icons.check_circle_outline
+          : Icons.cancel_outlined,
+      color: decision == 'approved'
+          ? const Color(0xFF2E7D32)
+          : Theme.of(context).colorScheme.error,
+      message: Text.rich(
+        TextSpan(
+          style: Theme.of(context).textTheme.bodyMedium,
+          children: [
+            TextSpan(text: decision == 'approved' ? 'Approve ' : 'Reject '),
+            TextSpan(
+              text:
+                  '${_selected.length} request${_selected.length == 1 ? '' : 's'}',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const TextSpan(text: '?'),
+          ],
+        ),
+      ),
+      swipeLabel: decision == 'approved'
+          ? 'Slide to approve all'
+          : 'Slide to reject all',
+    );
+    if (!confirmed) return;
+    await _decideBatch(decision);
   }
 
   Future<void> _decideBatch(String decision) async {
@@ -374,7 +428,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
                               ).colorScheme.error.withValues(alpha: 0.5),
                             ),
                           ),
-                          onPressed: () => _decideBatch('rejected'),
+                          onPressed: () => _confirmAndDecideBatch('rejected'),
                           icon: const Icon(Icons.close, size: 18),
                           label: Text('Reject (${_selected.length})'),
                         ),
@@ -385,7 +439,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
                           style: FilledButton.styleFrom(
                             backgroundColor: const Color(0xFF2E7D32),
                           ),
-                          onPressed: () => _decideBatch('approved'),
+                          onPressed: () => _confirmAndDecideBatch('approved'),
                           icon: const Icon(Icons.check, size: 18),
                           label: Text('Approve (${_selected.length})'),
                         ),

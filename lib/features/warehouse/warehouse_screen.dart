@@ -295,10 +295,9 @@ class _MaterialCardState extends ConsumerState<_MaterialCard> {
       Haptics.success();
       widget.onAdjustSubmitted();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Adjustment submitted — pending approval'),
-          ),
+        await SuccessPulse.show(
+          context,
+          'Adjustment submitted — pending approval',
         );
       }
     } on ApiException catch (e) {

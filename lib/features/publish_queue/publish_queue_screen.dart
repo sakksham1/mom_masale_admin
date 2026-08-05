@@ -9,6 +9,8 @@ import '../../core/utils/haptics.dart';
 import '../../shared/widgets/tap_scale.dart';
 import '../../shared/widgets/staggered_fade_in.dart';
 import '../../shared/widgets/swipe_to_confirm.dart';
+import '../../shared/widgets/swipe_confirm_sheet.dart';
+import '../../shared/widgets/success_pulse.dart';
 
 /// Thin standalone wrapper for the /publish-queue route — mirrors the
 /// DbExplorerScreen/DbExplorerView split so PublishQueueView can also be
@@ -78,19 +80,20 @@ class _PublishQueueViewState extends ConsumerState<PublishQueueView> {
     setState(() => _publishing = true);
     try {
       final result = await ref.read(publishQueueApiProvider).runPublish();
-      Haptics.success();
       ref.invalidate(publishQueueProvider);
       if (mounted) {
         final count = result.itemCount ?? pendingCount;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              result.published
-                  ? 'Published $count change${count == 1 ? '' : 's'}'
-                  : (result.message ?? 'Nothing to publish.'),
-            ),
-          ),
-        );
+        if (result.published) {
+          Haptics.success();
+          await SuccessPulse.show(
+            context,
+            'Published $count change${count == 1 ? '' : 's'}',
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result.message ?? 'Nothing to publish.')),
+          );
+        }
       }
     } on ApiException catch (e) {
       Haptics.warning();
@@ -105,43 +108,41 @@ class _PublishQueueViewState extends ConsumerState<PublishQueueView> {
   }
 
   Future<void> _confirmAndDiscard(int pendingCount) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Discard pending changes?'),
-        content: Text(
-          'This removes $pendingCount pending change${pendingCount == 1 ? '' : 's'} '
-          'from the queue without publishing them. This can\'t be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+    final confirmed = await SwipeConfirmSheet.show(
+      context,
+      icon: Icons.delete_outline,
+      color: Theme.of(context).colorScheme.error,
+      message: Text.rich(
+        TextSpan(
+          style: Theme.of(context).textTheme.bodyMedium,
+          children: [
+            const TextSpan(text: 'Discard '),
+            TextSpan(
+              text:
+                  '$pendingCount pending change${pendingCount == 1 ? '' : 's'}',
+              style: const TextStyle(fontWeight: FontWeight.w700),
             ),
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Discard'),
-          ),
-        ],
+            const TextSpan(
+              text: ' without publishing them? This can\'t be undone.',
+            ),
+          ],
+        ),
       ),
+      swipeLabel: 'Slide to discard',
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
 
     setState(() => _discarding = true);
     try {
       await ref.read(publishQueueApiProvider).discardQueue();
-      Haptics.tap();
+      Haptics.success();
       ref.invalidate(publishQueueProvider);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '$pendingCount pending change${pendingCount == 1 ? '' : 's'} discarded',
-            ),
-          ),
+        await SuccessPulse.show(
+          context,
+          '$pendingCount pending change${pendingCount == 1 ? '' : 's'} discarded',
+          icon: Icons.delete_outline,
+          accentColor: Theme.of(context).colorScheme.error,
         );
       }
     } on ApiException catch (e) {

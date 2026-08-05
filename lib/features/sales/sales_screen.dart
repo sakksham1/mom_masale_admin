@@ -6,6 +6,8 @@ import '../packaging/packaging_provider.dart' show staffProductsProvider;
 import '../../core/network/api_exception.dart';
 import '../../core/utils/currency.dart';
 import '../../core/constants/layout_constants.dart';
+import '../../shared/widgets/success_pulse.dart';
+import '../../core/utils/haptics.dart';
 
 class SalesScreen extends ConsumerWidget {
   const SalesScreen({super.key});
@@ -151,12 +153,12 @@ class SalesScreen extends ConsumerWidget {
           );
       ref.invalidate(salesStatsProvider);
       ref.invalidate(mySalesReportsProvider);
+      Haptics.success();
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Sale reported')));
+        await SuccessPulse.show(context, 'Sale reported');
       }
     } on ApiException catch (e) {
+      Haptics.warning();
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
