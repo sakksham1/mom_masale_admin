@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:dio/dio.dart' show Options, ResponseType;
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter_file_dialog/flutter_file_dialog.dart';
 import '../../core/network/api_client.dart';
 
 const careerJobStatuses = [
@@ -275,11 +277,20 @@ class CareersApi {
     });
   }
 
-  /// Downloads the CV through the authenticated session (the resume endpoint
-  /// requires a career-manager cookie, so a plain Image.network/browser link
-  /// won't work) and saves it into the app's documents directory.
-  /// Returns the local file path.
-  Future<String> downloadResume({
+  /// Downloads the CV through the authenticated session and hands it to the
+  /// person to save wherever they like.
+  ///
+  /// On Android/iOS, [getApplicationDocumentsDirectory] is app-private
+  /// internal storage — invisible in any file manager without root — so
+  /// instead this writes to a temp file and opens the native "Save As"
+  /// dialog (Storage Access Framework) so the person can pick Downloads (or
+  /// anywhere else) themselves, no storage permission required. Desktop
+  /// platforms keep the old direct-write path since their documents folder
+  /// is already a normal, browsable directory.
+  ///
+  /// Returns the saved file path, or `null` if the person cancelled the
+  /// save dialog (Android/iOS only — desktop always returns a path).
+  Future<String?> downloadResume({
     required int applicationId,
     required String filename,
   }) async {
@@ -288,10 +299,27 @@ class CareersApi {
       queryParameters: {'applicationId': applicationId},
       options: Options(responseType: ResponseType.bytes),
     );
-    final dir = await getApplicationDocumentsDirectory();
+    final bytes = response.data as List<int>;
     final safeName = filename.isEmpty ? 'resume-$applicationId' : filename;
+
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/$safeName');
+      await tempFile.writeAsBytes(bytes);
+      try {
+        final savedPath = await FlutterFileDialog.saveFile(
+          params: SaveFileDialogParams(sourceFilePath: tempFile.path),
+        );
+        return savedPath;
+      } finally {
+        // Clean up the temp copy regardless of what the person chose.
+        if (await tempFile.exists()) await tempFile.delete();
+      }
+    }
+
+    final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/$safeName');
-    await file.writeAsBytes(response.data as List<int>);
+    await file.writeAsBytes(bytes);
     return file.path;
   }
 }

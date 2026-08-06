@@ -32,11 +32,15 @@ class _ApplicationDetailScreenState
             applicationId: widget.applicationId,
             filename: resume.filename ?? 'resume',
           );
+      if (path == null) {
+        // Person cancelled the save dialog — nothing to report.
+        return;
+      }
       Haptics.success();
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Saved to app storage: $path')));
+        ).showSnackBar(SnackBar(content: Text('Saved: $path')));
       }
     } catch (e) {
       Haptics.warning();

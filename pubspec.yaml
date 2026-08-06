@@ -46,6 +46,7 @@ dependencies:
   firebase_core: ^4.12.1
   firebase_messaging: ^16.4.3
   flutter_local_notifications: ^18.0.1
+  flutter_file_dialog: ^3.3.2
   
 
 
