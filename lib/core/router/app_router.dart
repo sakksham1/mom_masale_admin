@@ -25,6 +25,7 @@ import '../../features/onboarding/pending_approval_screen.dart';
 import '../../features/onboarding/verify_email_screen.dart';
 import '../auth/signup_screen.dart';
 import '../../features/publish_queue/publish_queue_screen.dart';
+import '../../features/careers/careers_screen.dart';
 
 GoRouter buildRouter(AuthController auth) {
   return GoRouter(
@@ -118,6 +119,11 @@ GoRouter buildRouter(AuthController auth) {
             path: '/analytics',
             builder: (c, s) => const AnalyticsScreen(),
           ),
+          GoRoute(
+            path: '/analytics',
+            builder: (c, s) => const AnalyticsScreen(),
+          ),
+          GoRoute(path: '/careers', builder: (c, s) => const CareersScreen()),
           GoRoute(
             path: '/publish-queue',
             builder: (c, s) => const PublishQueueScreen(),

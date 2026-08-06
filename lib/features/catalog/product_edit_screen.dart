@@ -823,7 +823,7 @@ class _SectionHeader extends StatelessWidget {
               style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
             ),
           ),
-        if (trailing != null) trailing!,
+        ?trailing,
       ],
     );
   }
@@ -849,8 +849,7 @@ class _BareField extends StatelessWidget {
     this.maxLines = 1,
     this.maxLength,
     this.helper,
-    this.keyboardType,
-  });
+  }) : keyboardType = null;
 
   @override
   Widget build(BuildContext context) {

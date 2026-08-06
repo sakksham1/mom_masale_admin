@@ -44,6 +44,7 @@ const _allNavItems = [
     Icons.fact_check,
     'Approvals',
   ),
+  _NavItem('/careers', Icons.work_outline, Icons.work, 'Careers'),
   _NavItem(
     '/sales',
     Icons.point_of_sale_outlined,
@@ -91,7 +92,7 @@ const _siteNavItems = [
 const _moreGroupedRoles = {UserRole.admin, UserRole.manager};
 
 /// Paths folded behind the "More" popup for roles in [_moreGroupedRoles].
-const _groupedPaths = {'/business', '/stock', '/approvals'};
+const _groupedPaths = {'/business', '/stock', '/approvals', '/careers'};
 
 sealed class _NavSlot {
   const _NavSlot();
@@ -296,6 +297,8 @@ class _FloatingNavBarState extends State<_FloatingNavBar> {
         return const Color(0xFF2E7D32);
       case '/analytics':
         return AppColors.turmeric;
+      case '/careers':
+        return AppColors.paprika;
       default:
         return AppColors.maroon;
     }
