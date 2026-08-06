@@ -4,11 +4,15 @@ import 'user_role.dart';
 const Map<String, Set<UserRole>> routePermissions = {
   '/dashboard': {UserRole.admin, UserRole.manager},
   '/business': {UserRole.admin, UserRole.manager},
+  '/site': {UserRole.admin, UserRole.manager},
   '/catalog': {UserRole.admin, UserRole.manager},
   '/reviews': {UserRole.admin, UserRole.manager},
   '/analytics': {UserRole.admin, UserRole.manager},
   '/careers': {UserRole.admin, UserRole.manager},
   '/publish-queue': {UserRole.admin},
+  '/recipes': {UserRole.admin},
+  '/blog': {UserRole.admin},
+  '/site-core': {UserRole.admin},
   '/me': {
     UserRole.admin,
     UserRole.manager,

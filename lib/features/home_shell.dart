@@ -24,6 +24,10 @@ class _NavItem {
 // Consolidated: each entry may represent multiple merged screens (e.g.
 // "Business" = Orders + Customers, "Stock" = Inventory + Warehouse) so the
 // nav never overflows regardless of how many permissions a role has.
+// "Site" is its own full screen (see SiteScreen) housing Catalog, Reviews,
+// Publish Queue, Analytics, Recipes, Blog, and Site Settings — it used to
+// be a popup, but that got too cluttered once Recipes/Blog/Site Settings
+// joined, so it's a direct nav destination now.
 const _allNavItems = [
   _NavItem('/dashboard', Icons.dashboard_outlined, Icons.dashboard, 'Overview'),
   _NavItem(
@@ -45,6 +49,7 @@ const _allNavItems = [
     'Approvals',
   ),
   _NavItem('/careers', Icons.work_outline, Icons.work, 'Careers'),
+  _NavItem('/site', Icons.language_outlined, Icons.language, 'Site'),
   _NavItem(
     '/sales',
     Icons.point_of_sale_outlined,
@@ -60,38 +65,13 @@ const _allNavItems = [
   _NavItem('/my-requests', Icons.list_alt_outlined, Icons.list_alt, 'Requests'),
 ];
 
-/// The "Site" popup's contents — Catalog / Reviews / Publish Queue /
-/// Analytics. Not part of _allNavItems since these never render as direct
-/// tabs; they only ever appear inside the Site popup. Filtered per-role via
-/// canAccessRoute same as everything else (publish-queue is admin-only, so
-/// a manager simply never sees that entry).
-const _siteNavItems = [
-  _NavItem('/catalog', Icons.category_outlined, Icons.category, 'Catalog'),
-  _NavItem(
-    '/reviews',
-    Icons.rate_review_outlined,
-    Icons.rate_review,
-    'Reviews',
-  ),
-  _NavItem(
-    '/publish-queue',
-    Icons.publish_outlined,
-    Icons.publish,
-    'Publish Queue',
-  ),
-  _NavItem(
-    '/analytics',
-    Icons.query_stats_outlined,
-    Icons.query_stats,
-    'Analytics',
-  ),
-];
-
 /// Roles whose tab count is congested enough to warrant folding a few
 /// sections behind a "More" popup instead of showing every icon directly.
 const _moreGroupedRoles = {UserRole.admin, UserRole.manager};
 
 /// Paths folded behind the "More" popup for roles in [_moreGroupedRoles].
+/// "Site" stays out of this group — it's a primary destination now, not a
+/// secondary one, so it always gets its own direct icon.
 const _groupedPaths = {'/business', '/stock', '/approvals', '/careers'};
 
 sealed class _NavSlot {
@@ -104,8 +84,7 @@ class _SingleSlot extends _NavSlot {
 }
 
 /// A popup slot — tapping it opens NavMoreSheet with [items] instead of
-/// navigating directly. Used for both "More" (business/stock/approvals)
-/// and "Site" (catalog/reviews/publish-queue/analytics).
+/// navigating directly. Used for "More" (business/stock/approvals/careers).
 class _PopupSlot extends _NavSlot {
   final String key;
   final String label;
@@ -123,59 +102,36 @@ class _PopupSlot extends _NavSlot {
 /// Turns the role's accessible tabs into render slots — either a direct
 /// icon, or (for grouped roles, when there are enough grouped tabs to be
 /// worth folding) a single "More" popup slot standing in for several of
-/// them, inserted where the first grouped tab would have been. A "Site"
-/// popup slot is appended after, if the role can access any site item.
+/// them, inserted where the first grouped tab would have been.
 List<_NavSlot> _buildSlots(List<_NavItem> tabs, UserRole role) {
-  final siteItems = [
-    for (final i in _siteNavItems)
-      if (canAccessRoute(i.path, role)) i,
-  ];
-
-  List<_NavSlot> baseSlots;
   if (!_moreGroupedRoles.contains(role)) {
-    baseSlots = [for (final t in tabs) _SingleSlot(t)];
-  } else {
-    final grouped = tabs.where((t) => _groupedPaths.contains(t.path)).toList();
-    if (grouped.length < 2) {
-      baseSlots = [for (final t in tabs) _SingleSlot(t)];
-    } else {
-      final slots = <_NavSlot>[];
-      var inserted = false;
-      for (final t in tabs) {
-        if (_groupedPaths.contains(t.path)) {
-          if (!inserted) {
-            slots.add(
-              _PopupSlot(
-                key: 'more',
-                label: 'More',
-                icon: Icons.grid_view_outlined,
-                selectedIcon: Icons.grid_view_rounded,
-                items: grouped,
-              ),
-            );
-            inserted = true;
-          }
-          continue;
-        }
-        slots.add(_SingleSlot(t));
+    return [for (final t in tabs) _SingleSlot(t)];
+  }
+  final grouped = tabs.where((t) => _groupedPaths.contains(t.path)).toList();
+  if (grouped.length < 2) {
+    return [for (final t in tabs) _SingleSlot(t)];
+  }
+  final slots = <_NavSlot>[];
+  var inserted = false;
+  for (final t in tabs) {
+    if (_groupedPaths.contains(t.path)) {
+      if (!inserted) {
+        slots.add(
+          _PopupSlot(
+            key: 'more',
+            label: 'More',
+            icon: Icons.grid_view_outlined,
+            selectedIcon: Icons.grid_view_rounded,
+            items: grouped,
+          ),
+        );
+        inserted = true;
       }
-      baseSlots = slots;
+      continue;
     }
+    slots.add(_SingleSlot(t));
   }
-
-  if (siteItems.isNotEmpty) {
-    baseSlots.add(
-      _PopupSlot(
-        key: 'site',
-        label: 'Site',
-        icon: Icons.language_outlined,
-        selectedIcon: Icons.language,
-        items: siteItems,
-      ),
-    );
-  }
-
-  return baseSlots;
+  return slots;
 }
 
 class HomeShell extends ConsumerWidget {
@@ -220,11 +176,11 @@ class HomeShell extends ConsumerWidget {
               .maybeWhen(data: (s) => s.pendingCount > 0, orElse: () => false)
         : false;
 
-    // Keyed by popup slot key ('more' / 'site') plus any direct-tab paths —
+    // Keyed by popup slot key ('more') plus any direct-tab paths —
     // _FloatingNavBar checks both depending on the slot type.
     final pendingDots = <String, bool>{
       '/approvals': hasPendingApprovals,
-      'site': hasPendingReviews || hasPendingPublishQueue,
+      '/site': hasPendingReviews || hasPendingPublishQueue,
     };
 
     return Scaffold(
@@ -289,14 +245,6 @@ class _FloatingNavBarState extends State<_FloatingNavBar> {
         return AppColors.cumin;
       case '/approvals':
         return const Color(0xFF3D6B57);
-      case '/catalog':
-        return AppColors.paprika;
-      case '/reviews':
-        return const Color(0xFF3D6B57);
-      case '/publish-queue':
-        return const Color(0xFF2E7D32);
-      case '/analytics':
-        return AppColors.turmeric;
       case '/careers':
         return AppColors.paprika;
       default:

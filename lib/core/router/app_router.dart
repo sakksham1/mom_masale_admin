@@ -26,6 +26,10 @@ import '../../features/onboarding/verify_email_screen.dart';
 import '../auth/signup_screen.dart';
 import '../../features/publish_queue/publish_queue_screen.dart';
 import '../../features/careers/careers_screen.dart';
+import '../../features/site/site_screen.dart';
+import '../../features/recipes/recipes_screen.dart';
+import '../../features/blog/blog_screen.dart';
+import '../../features/site_core/site_core_screen.dart';
 
 GoRouter buildRouter(AuthController auth) {
   return GoRouter(
@@ -112,13 +116,9 @@ GoRouter buildRouter(AuthController auth) {
             builder: (c, s) => const PackagingHistoryScreen(),
           ),
           GoRoute(path: '/sales', builder: (c, s) => const SalesScreen()),
-          GoRoute(path: '/catalog', builder: (c, s) => const CatalogScreen()),
+          GoRoute(path: '/site', builder: (c, s) => const SiteScreen()),
           GoRoute(path: '/catalog', builder: (c, s) => const CatalogScreen()),
           GoRoute(path: '/reviews', builder: (c, s) => const ReviewsScreen()),
-          GoRoute(
-            path: '/analytics',
-            builder: (c, s) => const AnalyticsScreen(),
-          ),
           GoRoute(
             path: '/analytics',
             builder: (c, s) => const AnalyticsScreen(),
@@ -127,6 +127,12 @@ GoRouter buildRouter(AuthController auth) {
           GoRoute(
             path: '/publish-queue',
             builder: (c, s) => const PublishQueueScreen(),
+          ),
+          GoRoute(path: '/recipes', builder: (c, s) => const RecipesScreen()),
+          GoRoute(path: '/blog', builder: (c, s) => const BlogScreen()),
+          GoRoute(
+            path: '/site-core',
+            builder: (c, s) => const SiteCoreScreen(),
           ),
           GoRoute(
             path: '/approvals',

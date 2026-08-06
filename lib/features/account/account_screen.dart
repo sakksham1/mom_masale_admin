@@ -196,10 +196,18 @@ String _routeLabel(String path) {
       return 'Business';
     case '/stock':
       return 'Stock';
+    case '/site':
+      return 'Site';
     case '/catalog':
       return 'Catalog';
     case '/reviews':
       return 'Reviews';
+    case '/recipes':
+      return 'Recipes';
+    case '/blog':
+      return 'Blog';
+    case '/site-core':
+      return 'Site Settings';
     case '/packaging':
       return 'Report Packaging';
     case '/packaging/history':
@@ -208,6 +216,8 @@ String _routeLabel(String path) {
       return 'Sales';
     case '/approvals':
       return 'Approvals';
+    case '/careers':
+      return 'Careers';
     case '/db-explorer':
       return 'DB Explorer';
     case '/sessions':
