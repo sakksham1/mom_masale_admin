@@ -30,8 +30,8 @@ class SiteCoreApi {
     Map<String, dynamic>? commerce,
   }) {
     return client.patch('/api/admin/settings', {
-      if (business != null) 'business': business,
-      if (commerce != null) 'commerce': commerce,
+      'business': ?business,
+      'commerce': ?commerce,
     });
   }
 }

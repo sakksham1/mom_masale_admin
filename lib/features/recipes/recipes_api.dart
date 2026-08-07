@@ -1,6 +1,14 @@
 // lib/features/recipes/recipes_api.dart
 import '../../core/network/api_client.dart';
 
+/// Backend data (data/recipes.json) is hand-edited JSON, not schema-checked —
+/// a stray object where a string is expected (imageAlt/prepTime/cookTime/
+/// video/productSlug) used to crash the whole Recipes screen with a cast
+/// error. These coerce defensively instead of throwing.
+String? _asStringOrNull(dynamic v) => v is String ? v : null;
+String _asString(dynamic v, [String fallback = '']) =>
+    v is String ? v : fallback;
+
 class RecipeIngredient {
   String text;
   String? productSlug;
@@ -9,9 +17,10 @@ class RecipeIngredient {
   factory RecipeIngredient.fromJson(dynamic j) {
     if (j is String) return RecipeIngredient(text: j);
     final m = Map<String, dynamic>.from(j as Map);
+    final rawText = m['text'] ?? m['name'];
     return RecipeIngredient(
-      text: (m['text'] ?? m['name'] ?? '').toString(),
-      productSlug: m['productSlug'],
+      text: rawText is String ? rawText : (rawText?.toString() ?? ''),
+      productSlug: _asStringOrNull(m['productSlug']),
     );
   }
 }
@@ -45,16 +54,16 @@ class Recipe {
   });
 
   factory Recipe.fromJson(Map<String, dynamic> j) => Recipe(
-    slug: j['slug'] ?? '',
-    title: j['title'] ?? '',
-    category: j['category'] ?? '',
-    cuisine: j['cuisine'] ?? 'Indian',
-    description: j['description'] ?? '',
-    image: j['image'] ?? '',
-    imageAlt: j['imageAlt'],
-    prepTime: j['prepTime'],
-    cookTime: j['cookTime'],
-    video: j['video'],
+    slug: _asString(j['slug']),
+    title: _asString(j['title']),
+    category: _asString(j['category']),
+    cuisine: _asString(j['cuisine'], 'Indian'),
+    description: _asString(j['description']),
+    image: _asString(j['image']),
+    imageAlt: _asStringOrNull(j['imageAlt']),
+    prepTime: _asStringOrNull(j['prepTime']),
+    cookTime: _asStringOrNull(j['cookTime']),
+    video: _asStringOrNull(j['video']),
     servings: j['servings'] is int
         ? j['servings']
         : int.tryParse('${j['servings']}') ?? 4,

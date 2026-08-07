@@ -54,6 +54,21 @@ const _sourceTypeMeta = <String, _SourceTypeMeta>{
     Icons.remove_circle_outline,
     Color(0xFFC62828),
   ),
+  'recipe': _SourceTypeMeta(
+    'Recipe Changes',
+    Icons.restaurant_menu_outlined,
+    Color(0xFFB0752B),
+  ),
+  'blog': _SourceTypeMeta(
+    'Blog Changes',
+    Icons.article_outlined,
+    Color(0xFF3D6B57),
+  ),
+  'settings': _SourceTypeMeta(
+    'Site Settings Changes',
+    Icons.tune_outlined,
+    AppColors.maroon,
+  ),
 };
 
 class PublishQueueView extends ConsumerStatefulWidget {

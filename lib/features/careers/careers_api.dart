@@ -212,7 +212,7 @@ class CareersApi {
   Future<List<CareerJob>> fetchJobs({String? status}) async {
     final res = await client.get(
       '/api/careers/manage/jobs',
-      query: {if (status != null) 'status': status},
+      query: {'status': ?status},
     );
     return (res.data['jobs'] as List)
         .map((j) => CareerJob.fromJson(j))
@@ -241,7 +241,7 @@ class CareersApi {
     final res = await client.get(
       '/api/careers/manage/applications',
       query: {
-        if (status != null) 'status': status,
+        'status': ?status,
         if (jobId != null) 'jobId': '$jobId',
         'limit': '$limit',
         'offset': '$offset',
