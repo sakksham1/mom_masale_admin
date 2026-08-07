@@ -8,6 +8,11 @@ const blogCategories = [
   'Cooking Tips',
   'Ingredient Comparisons',
 ];
+String? _asStringOrNull(dynamic v) => v is String ? v : null;
+String _asString(dynamic v, [String fallback = '']) =>
+    v is String ? v : fallback;
+List<String> _asStringList(dynamic v) =>
+    v is List ? v.map((e) => e.toString()).toList() : const [];
 
 class BlogPost {
   final String slug, title, category, description, image;
@@ -28,17 +33,15 @@ class BlogPost {
   });
 
   factory BlogPost.fromJson(Map<String, dynamic> j) => BlogPost(
-    slug: j['slug'] ?? '',
-    title: j['title'] ?? '',
-    category: j['category'] ?? '',
-    description: j['description'] ?? '',
-    image: j['image'] ?? '',
-    imageAlt: j['imageAlt'],
-    body: List<String>.from(
-      (j['body'] as List? ?? []).map((e) => e.toString()),
-    ),
-    relatedProducts: List<String>.from(j['relatedProducts'] ?? []),
-    relatedRecipes: List<String>.from(j['relatedRecipes'] ?? []),
+    slug: _asString(j['slug']),
+    title: _asString(j['title']),
+    category: _asString(j['category']),
+    description: _asString(j['description']),
+    image: _asString(j['image']),
+    imageAlt: _asStringOrNull(j['imageAlt']),
+    body: _asStringList(j['body']),
+    relatedProducts: _asStringList(j['relatedProducts']),
+    relatedRecipes: _asStringList(j['relatedRecipes']),
   );
 }
 

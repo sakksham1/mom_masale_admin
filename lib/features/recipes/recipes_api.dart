@@ -8,6 +8,9 @@ import '../../core/network/api_client.dart';
 String? _asStringOrNull(dynamic v) => v is String ? v : null;
 String _asString(dynamic v, [String fallback = '']) =>
     v is String ? v : fallback;
+List<dynamic> _asList(dynamic v) => v is List ? v : const [];
+List<String> _asStringList(dynamic v) =>
+    v is List ? v.map((e) => e.toString()).toList() : const [];
 
 class RecipeIngredient {
   String text;
@@ -16,7 +19,8 @@ class RecipeIngredient {
 
   factory RecipeIngredient.fromJson(dynamic j) {
     if (j is String) return RecipeIngredient(text: j);
-    final m = Map<String, dynamic>.from(j as Map);
+    if (j is! Map) return RecipeIngredient(text: j?.toString() ?? '');
+    final m = Map<String, dynamic>.from(j);
     final rawText = m['text'] ?? m['name'];
     return RecipeIngredient(
       text: rawText is String ? rawText : (rawText?.toString() ?? ''),
@@ -69,13 +73,11 @@ class Recipe {
         : int.tryParse('${j['servings']}') ?? 4,
     trending: j['trending'] == true,
     essentials: j['essentials'] == true,
-    ingredients: (j['ingredients'] as List? ?? [])
-        .map((e) => RecipeIngredient.fromJson(e))
-        .toList(),
-    steps: List<String>.from(
-      (j['steps'] as List? ?? []).map((e) => e.toString()),
-    ),
-    relatedProducts: List<String>.from(j['relatedProducts'] ?? []),
+    ingredients: _asList(
+      j['ingredients'],
+    ).map((e) => RecipeIngredient.fromJson(e)).toList(),
+    steps: _asStringList(j['steps']),
+    relatedProducts: _asStringList(j['relatedProducts']),
   );
 }
 

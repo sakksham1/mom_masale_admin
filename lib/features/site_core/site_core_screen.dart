@@ -35,6 +35,12 @@ class _SiteCoreScreenState extends ConsumerState<SiteCoreScreen> {
   final _nationalFeeCtrl = TextEditingController();
   final Map<String, TextEditingController> _businessCtrls = {};
 
+  Map<String, dynamic> _asMap(dynamic v) =>
+      v is Map ? Map<String, dynamic>.from(v) : <String, dynamic>{};
+
+  List<String> _asStringListLoose(dynamic v) =>
+      v is List ? v.map((e) => e.toString()).toList() : const [];
+
   void _loadInto(SiteSettings s) {
     if (_loaded) return;
     _loaded = true;
@@ -43,15 +49,15 @@ class _SiteCoreScreenState extends ConsumerState<SiteCoreScreen> {
     _freeShipCtrl.text = '${commerce['freeShippingThreshold'] ?? 0}';
     _smallThresholdCtrl.text = '${commerce['smallOrderThreshold'] ?? 0}';
     _smallFeeCtrl.text = '${commerce['smallOrderFee'] ?? 0}';
-    final zones = Map<String, dynamic>.from(commerce['shippingZones'] ?? {});
-    final local = Map<String, dynamic>.from(zones['local'] ?? {});
-    final up = Map<String, dynamic>.from(zones['up'] ?? {});
-    final national = Map<String, dynamic>.from(zones['national'] ?? {});
-    _localPrefixesCtrl.text = List<String>.from(
-      local['prefixes'] ?? [],
-    ).join(', ');
+    final zones = _asMap(commerce['shippingZones']);
+    final local = _asMap(zones['local']);
+    final up = _asMap(zones['up']);
+    final national = _asMap(zones['national']);
+    _localPrefixesCtrl.text = _asStringListLoose(local['prefixes']).join(', ');
     _localFeeCtrl.text = '${local['fee'] ?? 0}';
-    final range = List<dynamic>.from(up['prefixRange'] ?? [0, 0]);
+    final range = up['prefixRange'] is List
+        ? up['prefixRange'] as List
+        : [0, 0];
     _upLoCtrl.text = '${range.isNotEmpty ? range[0] : 0}';
     _upHiCtrl.text = '${range.length > 1 ? range[1] : 0}';
     _upFeeCtrl.text = '${up['fee'] ?? 0}';
