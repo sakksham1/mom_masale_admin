@@ -349,14 +349,18 @@ class _ReviewCardState extends ConsumerState<_ReviewCard> {
             Text(r.title!, style: const TextStyle(fontWeight: FontWeight.w600)),
           ],
           const SizedBox(height: 6),
-          Text(
-            r.body,
-            maxLines: _expanded ? null : 4,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 13.5,
-              color: scheme.onSurface.withValues(alpha: 0.9),
-              height: 1.4,
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            alignment: Alignment.topLeft,
+            child: Text(
+              r.body,
+              maxLines: _expanded ? null : 4,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13.5,
+                color: scheme.onSurface.withValues(alpha: 0.9),
+                height: 1.4,
+              ),
             ),
           ),
           if (bodyOverflows)

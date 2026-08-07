@@ -296,7 +296,12 @@ class _SiteCoreScreenState extends ConsumerState<SiteCoreScreen> {
         data: (_) => SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            padding: EdgeInsets.fromLTRB(
+              16,
+              12,
+              16,
+              LayoutConstants.navBarClearance,
+            ),
             child: FilledButton.icon(
               onPressed: _saving ? null : _save,
               style: FilledButton.styleFrom(
