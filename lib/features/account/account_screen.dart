@@ -208,6 +208,10 @@ String _routeLabel(String path) {
       return 'Blog';
     case '/site-core':
       return 'Site Settings';
+    case '/themes':
+      return 'Site Themes';
+    case '/coupons':
+      return 'Coupons';
     case '/packaging':
       return 'Report Packaging';
     case '/packaging/history':

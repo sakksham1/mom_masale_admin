@@ -32,7 +32,7 @@ class _SiteCardMeta {
 }
 
 // Order matches the requested layout: Catalog, Reviews, Publish Queue,
-// Analytics, Recipes, Blog, Site Settings.
+// Analytics, Recipes, Blog, Themes, Coupons, Site Settings.
 const _cards = <_SiteCardMeta>[
   _SiteCardMeta(
     path: '/catalog',
@@ -75,6 +75,20 @@ const _cards = <_SiteCardMeta>[
     title: 'Blog',
     subtitle: 'Articles, FAQs & guides',
     color: Color(0xFF3D6B57),
+  ),
+  _SiteCardMeta(
+    path: '/themes',
+    icon: Icons.palette_outlined,
+    title: 'Site Themes',
+    subtitle: 'Seasonal looks, banners & hero content',
+    color: Color(0xFF7A5C9E),
+  ),
+  _SiteCardMeta(
+    path: '/coupons',
+    icon: Icons.sell_outlined,
+    title: 'Coupons',
+    subtitle: 'Discount codes & redemption limits',
+    color: Color(0xFFC98A1F),
   ),
   _SiteCardMeta(
     path: '/site-core',

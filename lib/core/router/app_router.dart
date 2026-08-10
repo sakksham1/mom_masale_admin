@@ -30,6 +30,8 @@ import '../../features/site/site_screen.dart';
 import '../../features/recipes/recipes_screen.dart';
 import '../../features/blog/blog_screen.dart';
 import '../../features/site_core/site_core_screen.dart';
+import '../../features/themes/themes_screen.dart';
+import '../../features/coupons/coupons_screen.dart';
 
 GoRouter buildRouter(AuthController auth) {
   return GoRouter(
@@ -134,6 +136,8 @@ GoRouter buildRouter(AuthController auth) {
             path: '/site-core',
             builder: (c, s) => const SiteCoreScreen(),
           ),
+          GoRoute(path: '/themes', builder: (c, s) => const ThemesScreen()),
+          GoRoute(path: '/coupons', builder: (c, s) => const CouponsScreen()),
           GoRoute(
             path: '/approvals',
             builder: (c, s) => const ApprovalsScreen(),
