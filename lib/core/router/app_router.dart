@@ -32,6 +32,7 @@ import '../../features/blog/blog_screen.dart';
 import '../../features/site_core/site_core_screen.dart';
 import '../../features/themes/themes_screen.dart';
 import '../../features/coupons/coupons_screen.dart';
+import '../../features/wheel/wheel_screen.dart';
 
 GoRouter buildRouter(AuthController auth) {
   return GoRouter(
@@ -138,6 +139,7 @@ GoRouter buildRouter(AuthController auth) {
           ),
           GoRoute(path: '/themes', builder: (c, s) => const ThemesScreen()),
           GoRoute(path: '/coupons', builder: (c, s) => const CouponsScreen()),
+          GoRoute(path: '/wheel', builder: (c, s) => const WheelScreen()),
           GoRoute(
             path: '/approvals',
             builder: (c, s) => const ApprovalsScreen(),

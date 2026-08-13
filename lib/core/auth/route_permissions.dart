@@ -15,6 +15,7 @@ const Map<String, Set<UserRole>> routePermissions = {
   '/site-core': {UserRole.admin},
   '/themes': {UserRole.admin, UserRole.manager},
   '/coupons': {UserRole.admin, UserRole.manager},
+  '/wheel': {UserRole.admin, UserRole.manager},
   '/me': {
     UserRole.admin,
     UserRole.manager,

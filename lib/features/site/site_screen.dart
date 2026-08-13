@@ -91,6 +91,13 @@ const _cards = <_SiteCardMeta>[
     color: Color(0xFFC98A1F),
   ),
   _SiteCardMeta(
+    path: '/wheel',
+    icon: Icons.donut_large_outlined,
+    title: 'Spice Wheel',
+    subtitle: 'Homepage wheel modes & wedges',
+    color: Color(0xFF9C6B30),
+  ),
+  _SiteCardMeta(
     path: '/site-core',
     icon: Icons.tune_outlined,
     title: 'Site Settings',
