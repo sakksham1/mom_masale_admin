@@ -192,4 +192,55 @@ class ApiClient {
     }
     cookieJar.deleteAll();
   }
+
+  // --- Profile / Security ---
+
+  Future<AppUser> updateProfile({String? name, String? phone}) async {
+    final body = <String, dynamic>{
+      if (name != null) 'name': name,
+      if (phone != null) 'phone': phone,
+    };
+    final res = await patch('/api/auth/update-profile', body);
+    return AppUser.fromJson(res.data['user']);
+  }
+
+  /// Sends a 6-digit OTP to [newEmail]. Nothing on the account changes until
+  /// [confirmEmailChange] verifies it.
+  Future<void> requestEmailChange(String newEmail) {
+    return post('/api/auth/request-email-change', {'newEmail': newEmail});
+  }
+
+  Future<AppUser> confirmEmailChange(String otp) async {
+    final res = await post('/api/auth/confirm-email-change', {'otp': otp});
+    return AppUser.fromJson(res.data['user']);
+  }
+
+  /// Password change reuses the "forgot password" OTP flow (send code to the
+  /// account's current email -> verify -> set new password), since there's
+  /// no separate "change password while logged in" endpoint. Resetting a
+  /// password revokes every session server-side (see reset-password.js), so
+  /// the caller must log out locally right after this succeeds.
+  Future<void> sendPasswordResetOtp(String email) {
+    return post('/api/auth/forgot-password', {'email': email});
+  }
+
+  Future<String> verifyPasswordResetOtp(String email, String otp) async {
+    final res = await post('/api/auth/verify-reset-otp', {
+      'email': email,
+      'otp': otp,
+    });
+    return res.data['resetToken'] as String;
+  }
+
+  Future<void> resetPassword({
+    required String email,
+    required String resetToken,
+    required String newPassword,
+  }) {
+    return post('/api/auth/reset-password', {
+      'email': email,
+      'resetToken': resetToken,
+      'newPassword': newPassword,
+    });
+  }
 }

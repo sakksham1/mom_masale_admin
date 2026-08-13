@@ -72,6 +72,24 @@ class AuthController extends ChangeNotifier {
     await restoreSession();
   }
 
+  /// Updates name and/or phone. Pass only the field(s) that changed.
+  Future<void> updateProfile({String? name, String? phone}) async {
+    _user = await _client.updateProfile(name: name, phone: phone);
+    notifyListeners();
+  }
+
+  /// Step 1 of the change-email flow — sends an OTP to [newEmail].
+  Future<void> requestEmailChange(String newEmail) {
+    return _client.requestEmailChange(newEmail);
+  }
+
+  /// Step 2 of the change-email flow — verifies the OTP and commits the
+  /// new email, refreshing the local user.
+  Future<void> confirmEmailChange(String otp) async {
+    _user = await _client.confirmEmailChange(otp);
+    notifyListeners();
+  }
+
   Future<void> logout() async {
     await PushNotificationService.instance.unregister();
     await _client.logout();
